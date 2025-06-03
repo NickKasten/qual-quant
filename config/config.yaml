@@ -1,0 +1,73 @@
+# Data Collection Settings
+data:
+  target_tickers:
+    - AAPL
+    - MSFT
+    - JPM
+    - V
+    - WMT
+  years_of_data: 30
+  data_sources:
+    - yahoo_finance
+    - tiingo
+    - alpha_vantage
+
+# SAC Model Settings
+sac:
+  hidden_dim: 256
+  learning_rate: 0.0003
+  gamma: 0.99
+  tau: 0.005
+  alpha: 0.2
+  batch_size: 64
+  buffer_size: 1000000
+  train_episodes: 1000
+  eval_episodes: 100
+
+# LLM Validator Settings
+llm:
+  model_name: "gpt-3.5-turbo"
+  news_sources:
+    - reuters
+    - bloomberg
+    - financial_times
+    - wall_street_journal
+  sentiment_model: "finbert-sentiment"
+  validation_threshold: 0.7
+
+# Trading Environment Settings
+environment:
+  initial_balance: 100000.0
+  transaction_cost: 0.001
+  max_position_size: 0.3
+  risk_free_rate: 0.02
+
+# Technical Indicators
+technical_indicators:
+  rsi:
+    window: 14
+    overbought: 70
+    oversold: 30
+  macd:
+    fast_period: 12
+    slow_period: 26
+    signal_period: 9
+  bollinger_bands:
+    window: 20
+    num_std: 2
+
+# Logging and Output
+logging:
+  level: INFO
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+  save_path: "logs"
+  model_save_path: "models/sac"
+  validation_history_path: "data/validation_history"
+
+# API Keys (to be loaded from environment variables)
+api_keys:
+  yahoo_finance: ${YH_FINANCE_API_KEY}
+  tiingo: ${TIINGO_API_KEY}
+  alpha_vantage: ${ALPHA_VANTAGE_API_KEY}
+  news_api: ${NEWS_API_KEY}
+  openai: ${OPENAI_API_KEY} 
