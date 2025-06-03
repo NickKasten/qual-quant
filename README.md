@@ -1,6 +1,10 @@
-# Vibe Trading System
+# Summer 2025 Personal Project: "Vibe"-Trading System
 
-A sophisticated trading system that combines SAC (Soft Actor-Critic) reinforcement learning with LLM-based decision validation for trading the top 5 Dow Jones stocks.
+An informed, agent-assisted, "vibe-coded" investment trading agent for local use.
+
+Current trading system: combined SAC (Soft Actor-Critic) reinforcement learning with LLM-based decision validation.
+
+Current portfolio: Top 5 Dow Jones tickers.
 
 ## Project Structure
 
@@ -73,6 +77,10 @@ python src/main.py
    - Input: SAC decisions + news context
    - Output: Final trading decision
    - Training: Historical news and market data
+
+## Long-term Goal: 
+
+Generate a team of agents to form an agentic-hedge fund.
 
 ## License
 
