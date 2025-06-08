@@ -188,7 +188,7 @@ class TradingSystem:
                         
                     # Verify all dataframes have the same number of unique dates
                     # For AAPL, we expect twice as many rows due to dual timestamps
-                    unique_dates = {ticker: len(df.index.date.unique()) for ticker, df in market_data.items()}
+                    unique_dates = {ticker: len(pd.Series(df.index.date).unique()) for ticker, df in market_data.items()}
                     if len(set(unique_dates.values())) != 1:
                         logger.warning(f"Number of unique dates after filtering: {unique_dates}")
                         # Find the minimum number of unique dates and trim all dataframes to that
@@ -196,11 +196,11 @@ class TradingSystem:
                         for ticker in market_data:
                             # For AAPL, keep both timestamps for each date
                             if ticker == 'AAPL':
-                                dates_to_keep = sorted(market_data[ticker].index.date.unique())[-min_unique_dates:]
+                                dates_to_keep = sorted(pd.Series(market_data[ticker].index.date).unique())[-min_unique_dates:]
                                 market_data[ticker] = market_data[ticker][market_data[ticker].index.date.isin(dates_to_keep)]
                             else:
                                 # For other tickers, trim to the minimum number of unique dates
-                                dates_to_keep = sorted(market_data[ticker].index.date.unique())[-min_unique_dates:]
+                                dates_to_keep = sorted(pd.Series(market_data[ticker].index.date).unique())[-min_unique_dates:]
                                 market_data[ticker] = market_data[ticker][market_data[ticker].index.date.isin(dates_to_keep)]
                         
                         # Log the final data lengths
@@ -365,15 +365,20 @@ class TradingSystem:
             
         logger.info(f"Starting evaluation with LLM validation: {use_llm}")
         
+        # Initialize metrics tracking
         total_rewards = []
         portfolio_values = []
-        sac_rewards = []  # Track rewards without LLM validation
-        validation_history = []  # Track LLM validation decisions
+        daily_returns = []
+        trades = []
+        positions_history = []
+        cash_history = []
         
         for episode in range(self.eval_episodes):
             state = self.env.reset()
             episode_reward = 0
-            sac_episode_reward = 0
+            episode_portfolio_values = []
+            episode_positions = []
+            episode_cash = []
             done = False
             
             while not done:
@@ -389,48 +394,209 @@ class TradingSystem:
                             self.env.data[self.env.tickers[0]].index[self.env.current_step],
                             self.market_data
                         )
-                        
-                        # Execute validated action
-                        next_state, reward, done, info = self.env.step(validated_action)
-                        
-                        # Record validation history
-                        validation_history.append({
-                            'ticker': self.env.tickers[0],
-                            'date': self.env.data[self.env.tickers[0]].index[self.env.current_step],
-                            'sac_action': action,
-                            'validated_action': validated_action,
-                            'reward': reward
-                        })
+                        action = validated_action
                     except Exception as e:
                         logger.error(f"LLM validation failed: {e}")
-                        # Fallback to SAC action
-                        next_state, reward, done, info = self.env.step(action)
-                else:
-                    # Execute SAC action directly
-                    next_state, reward, done, info = self.env.step(action)
+                
+                # Execute action
+                next_state, reward, done, info = self.env.step(action)
+                
+                # Track metrics
+                episode_reward += reward
+                episode_portfolio_values.append(info['portfolio_value'])
+                episode_positions.append(info['positions'].copy())
+                episode_cash.append(info['cash'])
+                
+                # Track trades
+                if np.any(action != 0):  # If any position changed
+                    trades.append({
+                        'step': self.env.current_step,
+                        'action': action,
+                        'portfolio_value': info['portfolio_value'],
+                        'cash': info['cash'],
+                        'positions': info['positions'].copy()
+                    })
                 
                 state = next_state
-                episode_reward += reward
-                
-                if done:
-                    portfolio_values.append(info['portfolio_value'])
             
+            # Calculate episode metrics
             total_rewards.append(episode_reward)
+            portfolio_values.append(episode_portfolio_values[-1])
+            positions_history.append(episode_positions)
+            cash_history.append(episode_cash)
             
-        # Save validation history if LLM was used
-        if use_llm and validation_history:
-            history_df = pd.DataFrame(validation_history)
-            history_path = os.path.join("data/validation_history", "live_validation_history.csv")
-            os.makedirs(os.path.dirname(history_path), exist_ok=True)
-            history_df.to_csv(history_path, index=False)
-            logger.info(f"Validation history saved to {history_path}")
+            # Calculate daily returns
+            episode_returns = np.diff(episode_portfolio_values) / episode_portfolio_values[:-1]
+            daily_returns.extend(episode_returns)
         
-        return {
+        # Calculate comprehensive metrics
+        daily_returns = np.array(daily_returns)
+        portfolio_values = np.array(portfolio_values)
+        
+        # Basic metrics
+        metrics = {
             'mean_reward': np.mean(total_rewards),
             'std_reward': np.std(total_rewards),
             'mean_portfolio_value': np.mean(portfolio_values),
-            'std_portfolio_value': np.std(portfolio_values)
+            'std_portfolio_value': np.std(portfolio_values),
+            'total_return': (np.mean(portfolio_values) - self.initial_balance) / self.initial_balance * 100,
+            'sharpe_ratio': self._calculate_sharpe_ratio(daily_returns),
+            'max_drawdown': self._calculate_max_drawdown(portfolio_values),
+            'win_rate': self._calculate_win_rate(daily_returns),
+            'avg_trade_size': self._calculate_avg_trade_size(trades),
+            'position_turnover': self._calculate_position_turnover(positions_history)
         }
+        
+        # Save evaluation results
+        self._save_evaluation_results(metrics, trades, positions_history, cash_history)
+        
+        # Create evaluation plots
+        self._plot_evaluation_results(metrics, trades, positions_history, cash_history)
+        
+        return metrics
+    
+    def _calculate_sharpe_ratio(self, returns: np.ndarray, risk_free_rate: float = 0.02) -> float:
+        """Calculate the Sharpe ratio of returns."""
+        if len(returns) == 0:
+            return 0.0
+        excess_returns = returns - risk_free_rate/252  # Daily risk-free rate
+        if np.std(excess_returns) == 0:
+            return 0.0
+        return np.mean(excess_returns) / np.std(excess_returns) * np.sqrt(252)  # Annualized
+    
+    def _calculate_max_drawdown(self, portfolio_values: np.ndarray) -> float:
+        """Calculate the maximum drawdown of portfolio values."""
+        if len(portfolio_values) == 0:
+            return 0.0
+        peak = np.maximum.accumulate(portfolio_values)
+        drawdown = (peak - portfolio_values) / peak
+        return np.max(drawdown) * 100  # Convert to percentage
+    
+    def _calculate_win_rate(self, returns: np.ndarray) -> float:
+        """Calculate the win rate of trades."""
+        if len(returns) == 0:
+            return 0.0
+        winning_trades = np.sum(returns > 0)
+        return (winning_trades / len(returns)) * 100  # Convert to percentage
+    
+    def _calculate_avg_trade_size(self, trades: List[Dict]) -> float:
+        """Calculate the average trade size."""
+        if not trades:
+            return 0.0
+        trade_sizes = [np.sum(np.abs(trade['action'])) for trade in trades]
+        return np.mean(trade_sizes)
+    
+    def _calculate_position_turnover(self, positions_history: List[List[np.ndarray]]) -> float:
+        """Calculate the average position turnover."""
+        if not positions_history:
+            return 0.0
+        turnovers = []
+        for episode_positions in positions_history:
+            if len(episode_positions) < 2:
+                continue
+            position_changes = np.diff(episode_positions, axis=0)
+            turnover = np.mean(np.abs(position_changes))
+            turnovers.append(turnover)
+        return np.mean(turnovers) if turnovers else 0.0
+    
+    def _save_evaluation_results(self, metrics: Dict[str, float], trades: List[Dict],
+                               positions_history: List[List[np.ndarray]], cash_history: List[List[float]]):
+        """Save evaluation results to files."""
+        # Create evaluation directory
+        eval_dir = "data/evaluation"
+        os.makedirs(eval_dir, exist_ok=True)
+        
+        # Save metrics
+        metrics_df = pd.DataFrame([metrics])
+        metrics_df.to_csv(os.path.join(eval_dir, "evaluation_metrics.csv"), index=False)
+        
+        # Save trades
+        trades_df = pd.DataFrame(trades)
+        trades_df.to_csv(os.path.join(eval_dir, "trades.csv"), index=False)
+        
+        # Save positions history
+        positions_df = pd.DataFrame({
+            'episode': [i for i, pos in enumerate(positions_history) for _ in pos],
+            'step': [j for pos in positions_history for j in range(len(pos))],
+            'positions': [pos for pos_list in positions_history for pos in pos_list]
+        })
+        positions_df.to_csv(os.path.join(eval_dir, "positions_history.csv"), index=False)
+        
+        # Save cash history
+        cash_df = pd.DataFrame({
+            'episode': [i for i, cash in enumerate(cash_history) for _ in cash],
+            'step': [j for cash in cash_history for j in range(len(cash))],
+            'cash': [c for cash_list in cash_history for c in cash_list]
+        })
+        cash_df.to_csv(os.path.join(eval_dir, "cash_history.csv"), index=False)
+        
+        logger.info(f"Evaluation results saved to {eval_dir}")
+    
+    def _plot_evaluation_results(self, metrics: Dict[str, float], trades: List[Dict],
+                               positions_history: List[List[np.ndarray]], cash_history: List[List[float]]):
+        """Create and save evaluation plots."""
+        import matplotlib.pyplot as plt
+        
+        # Create plots directory
+        plots_dir = "data/evaluation_plots"
+        os.makedirs(plots_dir, exist_ok=True)
+        
+        # Plot portfolio value over time
+        plt.figure(figsize=(12, 6))
+        for i, cash_list in enumerate(cash_history):
+            portfolio_values = [cash + np.sum(pos * self.env.get_current_prices(step=j))
+                             for j, (cash, pos) in enumerate(zip(cash_list, positions_history[i]))]
+            plt.plot(portfolio_values, label=f'Episode {i+1}')
+        plt.title('Portfolio Value Over Time')
+        plt.xlabel('Step')
+        plt.ylabel('Portfolio Value ($)')
+        plt.legend()
+        plt.grid(True)
+        plt.savefig(os.path.join(plots_dir, 'portfolio_value.png'))
+        plt.close()
+        
+        # Plot position allocations
+        plt.figure(figsize=(12, 6))
+        for i, pos_list in enumerate(positions_history):
+            positions = np.array(pos_list)
+            for j, ticker in enumerate(self.env.tickers):
+                plt.plot(positions[:, j], label=f'{ticker} (Episode {i+1})')
+        plt.title('Position Allocations Over Time')
+        plt.xlabel('Step')
+        plt.ylabel('Position Size')
+        plt.legend()
+        plt.grid(True)
+        plt.savefig(os.path.join(plots_dir, 'positions.png'))
+        plt.close()
+        
+        # Plot cash balance
+        plt.figure(figsize=(12, 6))
+        for i, cash_list in enumerate(cash_history):
+            plt.plot(cash_list, label=f'Episode {i+1}')
+        plt.title('Cash Balance Over Time')
+        plt.xlabel('Step')
+        plt.ylabel('Cash Balance ($)')
+        plt.legend()
+        plt.grid(True)
+        plt.savefig(os.path.join(plots_dir, 'cash_balance.png'))
+        plt.close()
+        
+        # Plot metrics summary
+        plt.figure(figsize=(10, 6))
+        metrics_to_plot = {
+            'Total Return (%)': metrics['total_return'],
+            'Sharpe Ratio': metrics['sharpe_ratio'],
+            'Max Drawdown (%)': metrics['max_drawdown'],
+            'Win Rate (%)': metrics['win_rate']
+        }
+        plt.bar(metrics_to_plot.keys(), metrics_to_plot.values())
+        plt.title('Performance Metrics Summary')
+        plt.xticks(rotation=45)
+        plt.tight_layout()
+        plt.savefig(os.path.join(plots_dir, 'metrics_summary.png'))
+        plt.close()
+        
+        logger.info(f"Evaluation plots saved to {plots_dir}")
         
     def _sample_batch(self) -> Dict[str, np.ndarray]:
         """Sample a batch from the replay buffer."""

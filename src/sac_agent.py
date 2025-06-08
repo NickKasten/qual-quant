@@ -5,6 +5,7 @@ import numpy as np
 from typing import Dict, Tuple, List
 import logging
 import torch.optim as optim
+import os
 
 logger = logging.getLogger(__name__)
 
@@ -193,4 +194,48 @@ class SACAgent:
             'critic1_loss': critic1_loss.item(),
             'critic2_loss': critic2_loss.item(),
             'policy_entropy': policy_entropy.item()
-        } 
+        }
+
+    def save(self, path: str):
+        """Save the SAC model state."""
+        state_dict = {
+            'actor': self.actor.state_dict(),
+            'critic1': self.critic1.state_dict(),
+            'critic2': self.critic2.state_dict(),
+            'target_critic1': self.target_critic1.state_dict(),
+            'target_critic2': self.target_critic2.state_dict(),
+            'actor_optimizer': self.actor_optimizer.state_dict(),
+            'critic1_optimizer': self.critic1_optimizer.state_dict(),
+            'critic2_optimizer': self.critic2_optimizer.state_dict(),
+            'alpha': self.alpha,
+            'gamma': self.gamma,
+            'tau': self.tau
+        }
+        torch.save(state_dict, path)
+        logger.info(f"SAC model saved to {path}")
+        
+    def load(self, path: str):
+        """Load the SAC model state."""
+        if not os.path.exists(path):
+            raise FileNotFoundError(f"No model found at {path}")
+            
+        state_dict = torch.load(path, map_location=self.device)
+        
+        # Load network states
+        self.actor.load_state_dict(state_dict['actor'])
+        self.critic1.load_state_dict(state_dict['critic1'])
+        self.critic2.load_state_dict(state_dict['critic2'])
+        self.target_critic1.load_state_dict(state_dict['target_critic1'])
+        self.target_critic2.load_state_dict(state_dict['target_critic2'])
+        
+        # Load optimizer states
+        self.actor_optimizer.load_state_dict(state_dict['actor_optimizer'])
+        self.critic1_optimizer.load_state_dict(state_dict['critic1_optimizer'])
+        self.critic2_optimizer.load_state_dict(state_dict['critic2_optimizer'])
+        
+        # Load hyperparameters
+        self.alpha = state_dict['alpha']
+        self.gamma = state_dict['gamma']
+        self.tau = state_dict['tau']
+        
+        logger.info(f"SAC model loaded from {path}") 
