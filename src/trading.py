@@ -6,6 +6,7 @@ import logging
 from datetime import datetime, timedelta
 from dotenv import load_dotenv
 import torch
+from tqdm import tqdm
 
 from data_collection import DataCollector
 from environment import TradingEnvironment
@@ -41,7 +42,12 @@ class TradingSystem:
         # Initialize components
         self.data_collector = DataCollector()
         if self.use_llm:
-            self.llm_validator = LLMValidator()
+            try:
+                self.llm_validator = LLMValidator()
+                logger.info("LLM validator initialized successfully")
+            except Exception as e:
+                logger.error(f"Failed to initialize LLM validator: {e}")
+                raise
         
         # Load or collect data
         self.market_data = self._load_or_collect_data()
@@ -60,6 +66,16 @@ class TradingSystem:
         
         # Initialize replay buffer
         self.replay_buffer = []
+        
+        # Initialize training metrics
+        self.training_metrics = {
+            'episode_rewards': [],
+            'policy_entropy': [],
+            'value_loss': [],
+            'policy_loss': [],
+            'q_values': [],
+            'alpha_loss': []
+        }
         
     def _validate_data(self):
         """Validate the loaded market data for completeness and correctness."""
@@ -148,19 +164,78 @@ class TradingSystem:
                     except Exception as e:
                         logger.error(f"Error loading data for {ticker}: {str(e)}")
                         raise
+                        
+            # Find common date range where all tickers have data
+            if market_data:
+                # Get the intersection of all date ranges
+                # Normalize all indices to UTC
+                for df in market_data.values():
+                    # Ensure index is DatetimeIndex and UTC
+                    if not isinstance(df.index, pd.DatetimeIndex):
+                        df.index = pd.to_datetime(df.index, utc=True)
+                    elif df.index.tz is None:
+                        df.index = df.index.tz_localize('UTC')
+                    else:
+                        df.index = df.index.tz_convert('UTC')
+                common_start = max(df.index.min() for df in market_data.values() if not df.empty)
+                common_end = min(df.index.max() for df in market_data.values() if not df.empty)
+                
+                if common_start and common_end:
+                    logger.info(f"Common date range: {common_start} to {common_end}")
+                    # Filter data to only include the common date range
+                    for ticker in market_data:
+                        market_data[ticker] = market_data[ticker][common_start:common_end]
+                        
+                    # Verify all dataframes have the same number of unique dates
+                    # For AAPL, we expect twice as many rows due to dual timestamps
+                    unique_dates = {ticker: len(df.index.date.unique()) for ticker, df in market_data.items()}
+                    if len(set(unique_dates.values())) != 1:
+                        logger.warning(f"Number of unique dates after filtering: {unique_dates}")
+                        # Find the minimum number of unique dates and trim all dataframes to that
+                        min_unique_dates = min(unique_dates.values())
+                        for ticker in market_data:
+                            # For AAPL, keep both timestamps for each date
+                            if ticker == 'AAPL':
+                                dates_to_keep = sorted(market_data[ticker].index.date.unique())[-min_unique_dates:]
+                                market_data[ticker] = market_data[ticker][market_data[ticker].index.date.isin(dates_to_keep)]
+                            else:
+                                # For other tickers, trim to the minimum number of unique dates
+                                dates_to_keep = sorted(market_data[ticker].index.date.unique())[-min_unique_dates:]
+                                market_data[ticker] = market_data[ticker][market_data[ticker].index.date.isin(dates_to_keep)]
+                        
+                        # Log the final data lengths
+                        data_lengths = {ticker: len(df) for ticker, df in market_data.items()}
+                        logger.info(f"Data lengths after filtering: {data_lengths}")
+                        
+                        # For AAPL, we expect twice as many rows as other tickers
+                        if data_lengths['AAPL'] != 2 * data_lengths['MSFT']:
+                            logger.warning(f"AAPL data length ({data_lengths['AAPL']}) is not twice MSFT's length ({data_lengths['MSFT']})")
+                else:
+                    logger.warning("No common date range found for all tickers")
+                    
             return market_data
         else:
             logger.info("Collecting new data...")
             return self.data_collector.collect_historical_data()
             
     def train(self):
-        """Train the SAC agent without LLM validation."""
+        """Train the SAC agent with comprehensive monitoring."""
         logger.info("Starting SAC training...")
         
-        for episode in range(self.train_episodes):
+        # Create progress bar for episodes
+        pbar = tqdm(range(self.train_episodes), desc="Training Episodes")
+        
+        for episode in pbar:
             state = self.env.reset()
             episode_reward = 0
             done = False
+            episode_metrics = {
+                'policy_entropy': [],
+                'value_loss': [],
+                'policy_loss': [],
+                'q_values': [],
+                'alpha_loss': []
+            }
             
             while not done:
                 # Get SAC decision
@@ -187,15 +262,102 @@ class TradingSystem:
                     batch = self._sample_batch()
                     losses = self.agent.update(batch)
                     
-                    if episode % 10 == 0:
-                        logger.info(f"Episode {episode}, Losses: {losses}")
+                    # Track metrics
+                    episode_metrics['policy_entropy'].append(losses.get('policy_entropy', 0))
+                    episode_metrics['value_loss'].append(losses.get('critic1_loss', 0) + losses.get('critic2_loss', 0))
+                    episode_metrics['policy_loss'].append(losses.get('actor_loss', 0))
+                    episode_metrics['q_values'].append(losses.get('q_value', 0))
+                    episode_metrics['alpha_loss'].append(losses.get('alpha_loss', 0))
                 
                 state = next_state
                 episode_reward += reward
             
+            # Store episode metrics
+            self.training_metrics['episode_rewards'].append(episode_reward)
+            for metric in episode_metrics:
+                if episode_metrics[metric]:
+                    self.training_metrics[metric].append(np.mean(episode_metrics[metric]))
+            
+            # Calculate moving averages for monitoring
+            reward_ma = np.mean(self.training_metrics['episode_rewards'][-10:]) if len(self.training_metrics['episode_rewards']) >= 10 else episode_reward
+            entropy_ma = np.mean(self.training_metrics['policy_entropy'][-10:]) if len(self.training_metrics['policy_entropy']) >= 10 else 0
+            
+            # Update progress bar with comprehensive metrics
+            pbar.set_postfix({
+                'reward': f'{episode_reward:.2f}',
+                'reward_ma': f'{reward_ma:.2f}',
+                'entropy': f'{entropy_ma:.2f}'
+            })
+            
+            # Log detailed metrics every 10 episodes
             if episode % 10 == 0:
-                logger.info(f"Episode {episode}, Total Reward: {episode_reward}")
-                
+                logger.info(f"Episode {episode} Metrics:")
+                logger.info(f"  Total Reward: {episode_reward:.2f}")
+                logger.info(f"  10-Episode Moving Average Reward: {reward_ma:.2f}")
+                logger.info(f"  Policy Entropy: {entropy_ma:.2f}")
+                if episode_metrics['value_loss']:
+                    logger.info(f"  Value Loss: {np.mean(episode_metrics['value_loss']):.4f}")
+                if episode_metrics['policy_loss']:
+                    logger.info(f"  Policy Loss: {np.mean(episode_metrics['policy_loss']):.4f}")
+                if episode_metrics['q_values']:
+                    logger.info(f"  Q-Value: {np.mean(episode_metrics['q_values']):.4f}")
+        
+        # Save training metrics
+        self._save_training_metrics()
+        
+    def _save_training_metrics(self):
+        """Save training metrics to a CSV file."""
+        metrics_df = pd.DataFrame(self.training_metrics)
+        metrics_path = os.path.join("data/training_metrics", "sac_training_metrics.csv")
+        os.makedirs(os.path.dirname(metrics_path), exist_ok=True)
+        metrics_df.to_csv(metrics_path, index=False)
+        logger.info(f"Training metrics saved to {metrics_path}")
+        
+        # Create and save plots
+        self._plot_training_metrics(metrics_df)
+        
+    def _plot_training_metrics(self, metrics_df):
+        """Create and save plots of training metrics."""
+        import matplotlib.pyplot as plt
+        
+        # Create plots directory
+        plots_dir = "data/training_plots"
+        os.makedirs(plots_dir, exist_ok=True)
+        
+        # Plot rewards
+        plt.figure(figsize=(10, 6))
+        plt.plot(metrics_df['episode_rewards'], label='Episode Reward')
+        plt.plot(metrics_df['episode_rewards'].rolling(10).mean(), label='10-Episode Moving Average')
+        plt.title('Training Rewards')
+        plt.xlabel('Episode')
+        plt.ylabel('Reward')
+        plt.legend()
+        plt.savefig(os.path.join(plots_dir, 'rewards.png'))
+        plt.close()
+        
+        # Plot policy entropy
+        plt.figure(figsize=(10, 6))
+        plt.plot(metrics_df['policy_entropy'], label='Policy Entropy')
+        plt.title('Policy Entropy During Training')
+        plt.xlabel('Episode')
+        plt.ylabel('Entropy')
+        plt.legend()
+        plt.savefig(os.path.join(plots_dir, 'entropy.png'))
+        plt.close()
+        
+        # Plot losses
+        plt.figure(figsize=(10, 6))
+        plt.plot(metrics_df['value_loss'], label='Value Loss')
+        plt.plot(metrics_df['policy_loss'], label='Policy Loss')
+        plt.title('Training Losses')
+        plt.xlabel('Episode')
+        plt.ylabel('Loss')
+        plt.legend()
+        plt.savefig(os.path.join(plots_dir, 'losses.png'))
+        plt.close()
+        
+        logger.info(f"Training plots saved to {plots_dir}")
+        
     def evaluate(self, use_llm: bool = None) -> Dict[str, float]:
         """Evaluate the trained agent with optional LLM validation."""
         if use_llm is None:
@@ -206,6 +368,7 @@ class TradingSystem:
         total_rewards = []
         portfolio_values = []
         sac_rewards = []  # Track rewards without LLM validation
+        validation_history = []  # Track LLM validation decisions
         
         for episode in range(self.eval_episodes):
             state = self.env.reset()
@@ -218,16 +381,30 @@ class TradingSystem:
                 action = self.agent.select_action(state, evaluate=True)
                 
                 if use_llm:
-                    # Get LLM validation
-                    validated_action = self.llm_validator.validate_decision(
-                        action,
-                        self.env.tickers,
-                        self.env.data[self.env.tickers[0]].index[self.env.current_step],
-                        self.market_data
-                    )
-                    
-                    # Execute validated action
-                    next_state, reward, done, info = self.env.step(validated_action)
+                    try:
+                        # Get LLM validation
+                        validated_action = self.llm_validator.validate_decision(
+                            action,
+                            self.env.tickers,
+                            self.env.data[self.env.tickers[0]].index[self.env.current_step],
+                            self.market_data
+                        )
+                        
+                        # Execute validated action
+                        next_state, reward, done, info = self.env.step(validated_action)
+                        
+                        # Record validation history
+                        validation_history.append({
+                            'ticker': self.env.tickers[0],
+                            'date': self.env.data[self.env.tickers[0]].index[self.env.current_step],
+                            'sac_action': action,
+                            'validated_action': validated_action,
+                            'reward': reward
+                        })
+                    except Exception as e:
+                        logger.error(f"LLM validation failed: {e}")
+                        # Fallback to SAC action
+                        next_state, reward, done, info = self.env.step(action)
                 else:
                     # Execute SAC action directly
                     next_state, reward, done, info = self.env.step(action)
@@ -240,6 +417,14 @@ class TradingSystem:
             
             total_rewards.append(episode_reward)
             
+        # Save validation history if LLM was used
+        if use_llm and validation_history:
+            history_df = pd.DataFrame(validation_history)
+            history_path = os.path.join("data/validation_history", "live_validation_history.csv")
+            os.makedirs(os.path.dirname(history_path), exist_ok=True)
+            history_df.to_csv(history_path, index=False)
+            logger.info(f"Validation history saved to {history_path}")
+        
         return {
             'mean_reward': np.mean(total_rewards),
             'std_reward': np.std(total_rewards),
@@ -261,28 +446,43 @@ class TradingSystem:
         }
         
     def save_model(self, path: str = "models/sac"):
-        """Save the trained model."""
+        """Save the trained SAC model and environment state."""
         os.makedirs(path, exist_ok=True)
-        torch.save({
-            'actor_state_dict': self.agent.actor.state_dict(),
-            'critic1_state_dict': self.agent.critic1.state_dict(),
-            'critic2_state_dict': self.agent.critic2.state_dict(),
-            'target_critic1_state_dict': self.agent.target_critic1.state_dict(),
-            'target_critic2_state_dict': self.agent.target_critic2.state_dict()
-        }, os.path.join(path, "sac_model.pt"))
         
-    def load_model(self, path: str = "models/sac/sac_model.pt"):
-        """Load a trained model."""
-        if os.path.exists(path):
-            checkpoint = torch.load(path)
-            self.agent.actor.load_state_dict(checkpoint['actor_state_dict'])
-            self.agent.critic1.load_state_dict(checkpoint['critic1_state_dict'])
-            self.agent.critic2.load_state_dict(checkpoint['critic2_state_dict'])
-            self.agent.target_critic1.load_state_dict(checkpoint['target_critic1_state_dict'])
-            self.agent.target_critic2.load_state_dict(checkpoint['target_critic2_state_dict'])
-            logger.info("Model loaded successfully")
-        else:
-            logger.warning("No model found at specified path")
+        # Save SAC model
+        model_path = os.path.join(path, "sac_model.pt")
+        self.agent.save(model_path)
+        logger.info(f"SAC model saved to {model_path}")
+        
+        # Save environment state
+        env_state = {
+            'market_data': self.market_data,
+            'tickers': self.env.tickers,
+            'initial_balance': self.initial_balance
+        }
+        env_path = os.path.join(path, "env_state.pt")
+        torch.save(env_state, env_path)
+        logger.info(f"Environment state saved to {env_path}")
+        
+    def load_model(self, path: str = "models/sac"):
+        """Load the trained SAC model and environment state."""
+        # Load SAC model
+        model_path = os.path.join(path, "sac_model.pt")
+        if not os.path.exists(model_path):
+            raise FileNotFoundError(f"SAC model not found at {model_path}")
+        self.agent.load(model_path)
+        logger.info(f"SAC model loaded from {model_path}")
+        
+        # Load environment state
+        env_path = os.path.join(path, "env_state.pt")
+        if not os.path.exists(env_path):
+            raise FileNotFoundError(f"Environment state not found at {env_path}")
+        env_state = torch.load(env_path)
+        
+        # Update environment with saved state
+        self.market_data = env_state['market_data']
+        self.env = TradingEnvironment(self.market_data, env_state['initial_balance'])
+        logger.info(f"Environment state loaded from {env_path}")
 
 if __name__ == "__main__":
     # Initialize and train the trading system without LLM
