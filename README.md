@@ -13,10 +13,8 @@ vibe-trading/
 ├── data/
 │   ├── raw/                 # Raw data from different sources
 │   ├── processed/           # Processed and merged data
-│   ├── news/               # Historical news data
 │   ├── training_metrics/   # Training performance metrics
-│   ├── training_plots/     # Training visualization plots
-│   └── validation_history/ # LLM validation decision history
+│   └── training_plots/     # Training visualization plots
 ├── models/
 │   ├── sac/                # SAC model implementation and saved models
 │   └── llm/                # LLM integration
@@ -107,4 +105,4 @@ Generate a team of agents to form an agentic-hedge fund.
 
 ## License
 
-MIT License 
+Apache License 
