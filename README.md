@@ -2,9 +2,13 @@
 
 An informed, agent-assisted, "vibe-coded" investment trading agent for local use.
 
-Current trading system: Combined SAC (Soft Actor-Critic) and PPO (Proximal Policy Optimization) reinforcement learning with LLM-based decision validation using Google's Gemini.
+## Current trading system: 
 
-Current portfolio: Top 5 Dow Jones tickers (AAPL, MSFT, JPM, V, WMT).
+Combined SAC (Soft Actor-Critic) or PPO (Proximal Policy Optimization) reinforcement learning with LLM-based decision validation using Google's Gemini.
+
+## Current portfolio: 
+
+Top 5 Dow Jones tickers (AAPL, MSFT, JPM, V, WMT).
 
 ## Project Structure
 
@@ -109,6 +113,12 @@ python src/main.py --mode live
    - Input: RL model decisions + market context
    - Output: Validated trading decisions
    - Features: News sentiment, market conditions, historical patterns
+
+## Current thoughts
+
+SAC took much longer to train (and proved difficult to vibe), so swapped to PPO for efficiency.
+Waiting to test out Gemini's performance as a validator.
+Excited for (but wary of) refactoring the project so I can add the web-app to display the agent's "abilities".
 
 ## Long-term Goal
 
