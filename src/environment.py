@@ -13,9 +13,15 @@ class TradingEnvironment(gym.Env):
         
         # Validate that all tickers have data
         self.data = {}
+        required_columns = ['open', 'high', 'low', 'close', 'volume']
         for ticker, df in data.items():
             if df.empty:
                 logger.warning(f"No data available for {ticker}, skipping")
+                continue
+            # Check for required columns
+            missing_cols = [col for col in required_columns if col not in df.columns]
+            if missing_cols:
+                logger.warning(f"Missing columns {missing_cols} for {ticker}, skipping")
                 continue
             self.data[ticker] = df
             
@@ -54,7 +60,7 @@ class TradingEnvironment(gym.Env):
             'technical_indicators': spaces.Box(
                 low=-np.inf,
                 high=np.inf,
-                shape=(len(self.tickers), 3),  # RSI, MACD, Bollinger Bands
+                shape=(len(self.tickers), 6),  # RSI, MACD, MACD Signal, BB Upper, BB Lower, ATR
                 dtype=np.float32
             ),
             'portfolio_state': spaces.Box(
@@ -67,28 +73,46 @@ class TradingEnvironment(gym.Env):
         
         self.reset()
         
-    def calculate_technical_indicators(self, data: pd.DataFrame) -> np.ndarray:
-        """Calculate technical indicators for a given ticker."""
-        # RSI
-        delta = data['Close'].diff()
+    def calculate_technical_indicators(self, data):
+        """Calculate technical indicators for the given data."""
+        # Calculate RSI
+        delta = data['close'].diff()
         gain = (delta.where(delta > 0, 0)).rolling(window=14).mean()
         loss = (-delta.where(delta < 0, 0)).rolling(window=14).mean()
         rs = gain / loss
         rsi = 100 - (100 / (1 + rs))
         
-        # MACD
-        exp1 = data['Close'].ewm(span=12, adjust=False).mean()
-        exp2 = data['Close'].ewm(span=26, adjust=False).mean()
+        # Calculate MACD
+        exp1 = data['close'].ewm(span=12, adjust=False).mean()
+        exp2 = data['close'].ewm(span=26, adjust=False).mean()
         macd = exp1 - exp2
         signal = macd.ewm(span=9, adjust=False).mean()
         
-        # Bollinger Bands
-        sma = data['Close'].rolling(window=20).mean()
-        std = data['Close'].rolling(window=20).std()
+        # Calculate Bollinger Bands
+        sma = data['close'].rolling(window=20).mean()
+        std = data['close'].rolling(window=20).std()
         upper_band = sma + (std * 2)
         lower_band = sma - (std * 2)
         
-        return np.column_stack((rsi, macd, (data['Close'] - lower_band) / (upper_band - lower_band)))
+        # Calculate ATR
+        high_low = data['high'] - data['low']
+        high_close = np.abs(data['high'] - data['close'].shift())
+        low_close = np.abs(data['low'] - data['close'].shift())
+        ranges = pd.concat([high_low, high_close, low_close], axis=1)
+        true_range = np.max(ranges, axis=1)
+        atr = true_range.rolling(14).mean()
+        
+        # Combine all indicators
+        indicators = pd.DataFrame({
+            'rsi': rsi,
+            'macd': macd,
+            'macd_signal': signal,
+            'bb_upper': upper_band,
+            'bb_lower': lower_band,
+            'atr': atr
+        })
+        
+        return indicators
         
     def get_observation(self) -> Dict[str, np.ndarray]:
         """Get current state observation."""
@@ -137,17 +161,18 @@ class TradingEnvironment(gym.Env):
         if len(df) == 0:
             return np.zeros(5)
         elif step >= len(df):
-            return df.iloc[-1][['Open', 'High', 'Low', 'Close', 'Volume']].values
+            return df.iloc[-1][['open', 'high', 'low', 'close', 'volume']].values
         else:
-            return df.iloc[step][['Open', 'High', 'Low', 'Close', 'Volume']].values
+            return df.iloc[step][['open', 'high', 'low', 'close', 'volume']].values
 
     def _safe_get_technical(self, df, step, calc_func):
+        """Safely get technical indicators for a given step."""
         if len(df) == 0:
-            return np.zeros(len(calc_func(pd.DataFrame([np.zeros(5)]))))
+            return np.zeros(6)  # RSI, MACD, MACD Signal, BB Upper, BB Lower, ATR
         elif step >= len(df):
-            return calc_func(df)[-1]
+            return calc_func(df).iloc[-1].values
         else:
-            return calc_func(df.iloc[:step + 1])[-1]
+            return calc_func(df.iloc[:step + 1]).iloc[-1].values
         
     def step(self, action: np.ndarray) -> Tuple[Dict[str, np.ndarray], float, bool, Dict]:
         """Execute one time step within the environment."""
@@ -251,9 +276,9 @@ class TradingEnvironment(gym.Env):
             if len(df) == 0:
                 prices.append(0.0)
             elif step >= len(df):
-                prices.append(df.iloc[-1]['Close'])
+                prices.append(df.iloc[-1]['close'])
             else:
-                prices.append(df.iloc[step]['Close'])
+                prices.append(df.iloc[step]['close'])
         return np.array(prices)
         
     def render(self, mode='human'):

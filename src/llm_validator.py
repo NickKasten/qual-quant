@@ -1,5 +1,5 @@
 import torch
-from transformers import AutoTokenizer, AutoModelForSequenceClassification, AutoModelForCausalLM, BitsAndBytesConfig
+from transformers import AutoTokenizer, AutoModelForSequenceClassification
 import pandas as pd
 import numpy as np
 from typing import Dict, List, Tuple
@@ -10,6 +10,7 @@ from dotenv import load_dotenv
 import requests
 import json
 from concurrent.futures import ThreadPoolExecutor
+import google.generativeai as genai
 
 # Load environment variables
 load_dotenv()
@@ -128,25 +129,17 @@ class NewsProcessor:
         return sentiment_scores[0][1].item()  # Return positive sentiment score
 
 class LLMValidator:
-    def __init__(self, model_name: str = "Qwen/Qwen-3-7B"):
+    def __init__(self, model_name: str = "gemini-pro"):
         self.news_processor = NewsProcessor()
         self.model_name = model_name
         
-        # Configure 4-bit quantization
-        quantization_config = BitsAndBytesConfig(
-            load_in_4bit=True,
-            bnb_4bit_compute_dtype=torch.float16,
-            bnb_4bit_quant_type="nf4",
-            bnb_4bit_use_double_quant=True
-        )
-        
-        self.tokenizer = AutoTokenizer.from_pretrained(model_name, trust_remote_code=True)
-        self.model = AutoModelForCausalLM.from_pretrained(
-            model_name,
-            trust_remote_code=True,
-            quantization_config=quantization_config,
-            device_map="auto"
-        )
+        # Configure Gemini
+        api_key = os.getenv('GOOGLE_API_KEY')
+        if not api_key:
+            raise ValueError("Missing GOOGLE_API_KEY. Please set it in .env file")
+            
+        genai.configure(api_key=api_key)
+        self.model = genai.GenerativeModel(model_name)
         
     def get_news_context(self, ticker: str, date: datetime) -> str:
         """Get relevant news context for a given ticker and date."""
@@ -250,7 +243,7 @@ class LLMValidator:
             
         except Exception as e:
             logger.error(f"Error getting market context for {ticker}: {e}")
-            return "Market data unavailable"
+            return "Error retrieving market context"
         
     def _create_validation_prompt(self,
                                 ticker: str,
@@ -258,78 +251,82 @@ class LLMValidator:
                                 news_context: str,
                                 sentiment_score: float,
                                 market_context: str) -> str:
-        """Create prompt for LLM validation."""
-        return f"""As a trading expert, validate the following trading decision:
+        """Create a prompt for the LLM to validate the trading decision."""
+        return f"""As a financial expert, please analyze the following trading decision for {ticker}:
 
-Ticker: {ticker}
-SAC Model Decision: {sac_decision:.2f} (positive means buy, negative means sell)
-
-Recent News:
-{news_context}
-
-News Sentiment Score: {sentiment_score:.2f} (0-1, higher means more positive)
+Trading Decision: {sac_decision:.2f} (positive for long, negative for short)
 
 Market Context:
 {market_context}
 
-Please analyze the above information and provide your validation in the following format:
-1. Confidence in SAC decision (0-1)
-2. Suggested adjustment to SAC decision (-1 to 1)
-3. Detailed reasoning for your validation, considering:
-   - News sentiment and recent developments
-   - Market trends and technical indicators
-   - Potential risks and opportunities
-   - Any conflicting signals between news and market data
+News Context:
+{news_context}
 
-Your response:"""
+News Sentiment Score: {sentiment_score:.2f} (0-1, higher is more positive)
+
+Please provide your analysis in the following JSON format:
+{{
+    "confidence": float,  # 0-1, how confident you are in the decision
+    "adjustment_factor": float,  # -1 to 1, how much to adjust the decision
+    "reasoning": string,  # Brief explanation of your analysis
+    "risks": string  # Key risks to consider
+}}
+
+Focus on:
+1. Market technical indicators and trends
+2. Recent news and sentiment
+3. Potential risks and market conditions
+4. Whether the decision aligns with the available information
+
+Please be concise and focus on the most relevant factors."""
         
     def _get_llm_validation(self, prompt: str) -> Dict:
-        """Get validation from Qwen-3 model."""
-        inputs = self.tokenizer(prompt, return_tensors="pt", truncation=True, max_length=2048)
-        if torch.cuda.is_available():
-            inputs = {k: v.cuda() for k, v in inputs.items()}
-            
-        with torch.no_grad():
-            outputs = self.model.generate(
-                **inputs,
-                max_new_tokens=512,
-                temperature=0.7,
-                top_p=0.9,
-                do_sample=True
-            )
-            
-        response = self.tokenizer.decode(outputs[0], skip_special_tokens=True)
-        
-        # Parse the response to extract confidence, adjustment, and reasoning
+        """Get validation from the LLM."""
         try:
-            # Extract the response after "Your response:"
-            response_text = response.split("Your response:")[-1].strip()
+            response = self.model.generate_content(prompt)
+            response_text = response.text
             
-            # Parse the response format
-            lines = response_text.split('\n')
-            confidence = float(lines[0].split(':')[-1].strip())
-            adjustment = float(lines[1].split(':')[-1].strip())
-            reasoning = '\n'.join(lines[2:]).strip()
+            # Extract JSON from response
+            try:
+                # Find JSON in the response
+                json_start = response_text.find('{')
+                json_end = response_text.rfind('}') + 1
+                if json_start >= 0 and json_end > json_start:
+                    json_str = response_text[json_start:json_end]
+                    validation = json.loads(json_str)
+                else:
+                    raise ValueError("No JSON found in response")
+                    
+            except json.JSONDecodeError as e:
+                logger.error(f"Error parsing LLM response as JSON: {e}")
+                logger.error(f"Raw response: {response_text}")
+                return {
+                    "confidence": 0.5,
+                    "adjustment_factor": 0.0,
+                    "reasoning": "Error parsing LLM response",
+                    "risks": "Unknown due to parsing error"
+                }
+                
+            return validation
             
-            return {
-                'confidence': confidence,
-                'adjustment': adjustment,
-                'reasoning': reasoning
-            }
         except Exception as e:
-            logger.error(f"Error parsing Qwen-3 response: {e}")
+            logger.error(f"Error getting LLM validation: {e}")
             return {
-                'confidence': 0.5,
-                'adjustment': 0.0,
-                'reasoning': "Error in parsing model response"
+                "confidence": 0.5,
+                "adjustment_factor": 0.0,
+                "reasoning": f"Error: {str(e)}",
+                "risks": "Unknown due to error"
             }
-        
+            
     def _adjust_decision(self, sac_decision: float, validation: Dict) -> float:
-        """Adjust SAC decision based on LLM validation."""
-        # Combine SAC decision with LLM validation
-        adjusted_decision = sac_decision * validation['confidence'] + validation['adjustment']
+        """Adjust the SAC decision based on LLM validation."""
+        confidence = validation.get("confidence", 0.5)
+        adjustment_factor = validation.get("adjustment_factor", 0.0)
         
-        # Ensure decision stays within bounds
+        # Apply adjustment based on confidence
+        adjusted_decision = sac_decision * (1 + adjustment_factor * confidence)
+        
+        # Clamp to [-1, 1] range
         return np.clip(adjusted_decision, -1.0, 1.0)
         
     def save_validation_history(self, 
@@ -339,23 +336,24 @@ Your response:"""
                               validated_decision: float,
                               validation: Dict,
                               path: str = "data/validation_history"):
-        """Save validation history for analysis."""
+        """Save validation history to a file."""
         os.makedirs(path, exist_ok=True)
         
-        history = {
-            'ticker': ticker,
-            'date': date,
+        history_file = os.path.join(path, f"{ticker}_validation_history.csv")
+        
+        history_entry = {
+            'date': date.strftime('%Y-%m-%d %H:%M:%S'),
             'sac_decision': sac_decision,
             'validated_decision': validated_decision,
-            'confidence': validation['confidence'],
-            'adjustment': validation['adjustment'],
-            'reasoning': validation['reasoning']
+            'confidence': validation.get('confidence', 0.5),
+            'adjustment_factor': validation.get('adjustment_factor', 0.0),
+            'reasoning': validation.get('reasoning', ''),
+            'risks': validation.get('risks', '')
         }
         
-        df = pd.DataFrame([history])
-        file_path = os.path.join(path, f"{ticker}_validation_history.csv")
+        df = pd.DataFrame([history_entry])
         
-        if os.path.exists(file_path):
-            df.to_csv(file_path, mode='a', header=False, index=False)
+        if os.path.exists(history_file):
+            df.to_csv(history_file, mode='a', header=False, index=False)
         else:
-            df.to_csv(file_path, index=False) 
+            df.to_csv(history_file, index=False) 

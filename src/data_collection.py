@@ -10,6 +10,7 @@ import logging
 from dotenv import load_dotenv
 import argparse
 import time
+import yaml
 
 # Load environment variables
 load_dotenv()
@@ -19,9 +20,18 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 class DataCollector:
-    def __init__(self, use_tiingo: bool = True, use_alpha_vantage: bool = True):
+    def __init__(self, use_tiingo: bool = False, use_alpha_vantage: bool = False):
+        """
+        Initialize the data collector.
+        By default, only use Yahoo Finance to avoid API limits.
+        """
         self.use_tiingo = use_tiingo
         self.use_alpha_vantage = use_alpha_vantage
+        
+        # Load configuration
+        config_path = os.path.join('config', 'config.yaml')
+        with open(config_path, 'r') as f:
+            self.config = yaml.safe_load(f)
         
         if use_tiingo:
             self.tiingo_client = TiingoClient({
@@ -30,8 +40,8 @@ class DataCollector:
         if use_alpha_vantage:
             self.alpha_vantage = TimeSeries(key=os.getenv('ALPHA_VANTAGE_API_KEY'))
         
-        # Top 5 Dow Jones stocks by market cap
-        self.target_tickers = ['AAPL', 'MSFT', 'JPM', 'V', 'WMT']
+        # Use target tickers from config
+        self.target_tickers = self.config['data']['target_tickers']
         
     def fetch_yahoo_data(self, ticker: str, start_date: str, end_date: str) -> pd.DataFrame:
         """Fetch data from Yahoo Finance with retry logic."""
@@ -48,11 +58,16 @@ class DataCollector:
                     logger.warning(f"No data returned from Yahoo Finance for {ticker}")
                     return pd.DataFrame()
                 
-                # Fix column renaming for MultiIndex columns
-                if isinstance(data.columns, pd.MultiIndex):
-                    data.columns = [f'yahoo_{col[0].lower()}' for col in data.columns]
-                else:
-                    data.columns = [f'yahoo_{col.lower()}' for col in data.columns]
+                # Ensure we have all required columns
+                required_cols = ['Open', 'High', 'Low', 'Close', 'Volume']
+                for col in required_cols:
+                    if col not in data.columns:
+                        data[col] = np.nan
+                
+                # Select only required columns and rename to standard format
+                data = data[required_cols]
+                data.columns = [col.lower() for col in required_cols]
+                
                 return data
             except Exception as e:
                 logger.error(f"Error fetching Yahoo data for {ticker} (attempt {attempt + 1}/{max_retries}): {str(e)}")
@@ -63,6 +78,9 @@ class DataCollector:
 
     def fetch_tiingo_data(self, ticker: str, start_date: str, end_date: str) -> pd.DataFrame:
         """Fetch data from Tiingo with chunking for long periods."""
+        if not self.use_tiingo:
+            return pd.DataFrame()
+            
         try:
             # Split the date range into 1-year chunks to avoid API limitations
             start = datetime.strptime(start_date, '%Y-%m-%d')
@@ -82,11 +100,19 @@ class DataCollector:
                 )
                 
                 if not chunk_data.empty:
-                    chunk_data.columns = [f'tiingo_{col.lower()}' for col in chunk_data.columns]
+                    # Map Tiingo columns to standard format
+                    column_mapping = {
+                        'open': 'open',
+                        'high': 'high',
+                        'low': 'low',
+                        'close': 'close',
+                        'volume': 'volume'
+                    }
+                    chunk_data = chunk_data.rename(columns=column_mapping)
                     all_data.append(chunk_data)
                 
                 current_start = current_end + timedelta(days=1)
-                time.sleep(1)  # Rate limiting
+                time.sleep(2)  # Increased rate limiting
             
             if not all_data:
                 return pd.DataFrame()
@@ -98,17 +124,34 @@ class DataCollector:
 
     def fetch_alpha_vantage_data(self, ticker: str) -> pd.DataFrame:
         """Fetch data from Alpha Vantage with retry logic."""
+        if not self.use_alpha_vantage:
+            return pd.DataFrame()
+            
         max_retries = 3
         retry_delay = 5  # seconds
         
         for attempt in range(max_retries):
             try:
                 data, _ = self.alpha_vantage.get_daily(symbol=ticker, outputsize='full')
+                
+                # Convert to DataFrame if it's not already
+                if isinstance(data, dict):
+                    data = pd.DataFrame.from_dict(data, orient='index')
+                
                 if data.empty:
                     logger.warning(f"No data returned from Alpha Vantage for {ticker}")
                     return pd.DataFrame()
-                    
-                data.columns = [f'av_{col.lower()}' for col in data.columns]
+                
+                # Map Alpha Vantage columns to standard format
+                column_mapping = {
+                    '1. open': 'open',
+                    '2. high': 'high',
+                    '3. low': 'low',
+                    '4. close': 'close',
+                    '5. volume': 'volume'
+                }
+                data = data.rename(columns=column_mapping)
+                
                 return data
             except Exception as e:
                 logger.error(f"Error fetching Alpha Vantage data for {ticker} (attempt {attempt + 1}/{max_retries}): {str(e)}")
@@ -137,10 +180,10 @@ class DataCollector:
             col_candidates = [c for c in merged.columns if col in c]
             if col_candidates:
                 # Calculate median instead of mean for more robust consensus
-                consensus[col.capitalize()] = merged[col_candidates].median(axis=1)
+                consensus[col] = merged[col_candidates].median(axis=1)
         
         # Ensure all required columns are present
-        required_cols = ['Open', 'High', 'Low', 'Close', 'Volume']
+        required_cols = ['open', 'high', 'low', 'close', 'volume']
         for col in required_cols:
             if col not in consensus.columns:
                 consensus[col] = np.nan
@@ -153,33 +196,29 @@ class DataCollector:
         consensus = consensus.clip(lower=0)
         
         # 2. Ensure High >= Open, High >= Close, Low <= Open, Low <= Close
-        consensus['High'] = consensus[['High', 'Open', 'Close']].max(axis=1)
-        consensus['Low'] = consensus[['Low', 'Open', 'Close']].min(axis=1)
+        consensus['high'] = consensus[['high', 'open', 'close']].max(axis=1)
+        consensus['low'] = consensus[['low', 'open', 'close']].min(axis=1)
         
         # 3. Remove any rows where High < Low (shouldn't happen after above fixes)
-        consensus = consensus[consensus['High'] >= consensus['Low']]
+        consensus = consensus[consensus['high'] >= consensus['low']]
         
         # 4. Fill missing values with forward fill, then backward fill
-        consensus = consensus.fillna(method='ffill').fillna(method='bfill')
+        consensus = consensus.ffill().bfill()
         
         # 5. Remove any remaining rows with missing values
         consensus = consensus.dropna(subset=required_cols)
         
         # 6. Remove any rows with zero prices
         consensus = consensus[
-            (consensus['Open'] > 0) & 
-            (consensus['High'] > 0) & 
-            (consensus['Low'] > 0) & 
-            (consensus['Close'] > 0)
+            (consensus['open'] > 0) & 
+            (consensus['high'] > 0) & 
+            (consensus['low'] > 0) & 
+            (consensus['close'] > 0)
         ]
         
         # 7. Remove any rows with unreasonable price movements (>50% daily change)
-        price_changes = consensus['Close'].pct_change().abs()
+        price_changes = consensus['close'].pct_change().abs()
         consensus = consensus[price_changes <= 0.5]
-        
-        # 8. For AAPL, keep both regular market hours and after-hours data
-        # This is done by not resampling or aggregating the data
-        # The dual timestamps will be preserved in the output
         
         return consensus[required_cols]
 
@@ -194,56 +233,72 @@ class DataCollector:
         
         return common_start.strftime('%Y-%m-%d'), common_end.strftime('%Y-%m-%d')
 
-    def collect_historical_data(self, years: int = 30) -> Dict[str, pd.DataFrame]:
-        """Collect and cross-verify historical data for all target tickers."""
-        end_date = datetime.now()
-        start_date = end_date - timedelta(days=years*365)
-        
-        start_date_str = start_date.strftime('%Y-%m-%d')
-        end_date_str = end_date.strftime('%Y-%m-%d')
+    def collect_historical_data(self, years: int = None) -> Dict[str, pd.DataFrame]:
+        """Collect historical data for all target tickers."""
+        if years is None:
+            years = self.config['data']['years_of_data']
+            
+        end_date = datetime.now().strftime('%Y-%m-%d')
+        start_date = (datetime.now() - timedelta(days=365 * years)).strftime('%Y-%m-%d')
         
         historical_data = {}
-        
         for ticker in self.target_tickers:
             logger.info(f"Collecting data for {ticker}")
             
-            # Fetch data from enabled sources
-            yahoo_data = self.fetch_yahoo_data(ticker, start_date_str, end_date_str)
-            tiingo_data = pd.DataFrame() if not self.use_tiingo else self.fetch_tiingo_data(ticker, start_date_str, end_date_str)
-            av_data = pd.DataFrame() if not self.use_alpha_vantage else self.fetch_alpha_vantage_data(ticker)
+            # Fetch data from all sources
+            yahoo_data = self.fetch_yahoo_data(ticker, start_date, end_date)
+            tiingo_data = self.fetch_tiingo_data(ticker, start_date, end_date)
+            av_data = self.fetch_alpha_vantage_data(ticker)
             
             # Cross-verify and create consensus
             consensus_data = self.cross_verify_data(yahoo_data, tiingo_data, av_data)
-            historical_data[ticker] = consensus_data
-        
-        # Find common date range where all tickers have data
-        common_start, common_end = self.find_common_date_range(historical_data)
-        if common_start and common_end:
-            logger.info(f"Common date range: {common_start} to {common_end}")
-            # Filter data to only include the common date range
-            for ticker in self.target_tickers:
-                historical_data[ticker] = historical_data[ticker][common_start:common_end]
-                
-            # Verify all dataframes have the same length
-            lengths = [len(df) for df in historical_data.values()]
-            if len(set(lengths)) != 1:
-                logger.warning(f"Data lengths after filtering: {dict(zip(self.target_tickers, lengths))}")
-                # Find the shortest length and trim all dataframes to that length
-                min_length = min(lengths)
-                for ticker in self.target_tickers:
-                    historical_data[ticker] = historical_data[ticker].iloc[-min_length:]
-                logger.info(f"Trimmed all dataframes to {min_length} points")
-        else:
-            logger.warning("No common date range found for all tickers")
             
+            if not consensus_data.empty:
+                historical_data[ticker] = consensus_data
+            else:
+                logger.warning(f"No valid data collected for {ticker}")
+        
+        # Find common date range across all tickers
+        if historical_data:
+            common_start, common_end = self.find_common_date_range(historical_data)
+            logger.info(f"Common date range: {common_start} to {common_end}")
+            
+            # Align all data to common date range
+            for ticker in historical_data:
+                historical_data[ticker] = historical_data[ticker].loc[common_start:common_end]
+        
         return historical_data
 
+    def load_local_data(self, path: str) -> Dict[str, pd.DataFrame]:
+        """Load processed data from local storage."""
+        import pickle
+        if not os.path.exists(path):
+            logger.warning(f"Local data file {path} does not exist.")
+            return None
+        with open(path, 'rb') as f:
+            data = pickle.load(f)
+        logger.info(f"Loaded local data from {path}")
+        return data
+
     def save_data(self, data: Dict[str, pd.DataFrame], path: str):
-        """Save collected data to disk."""
-        os.makedirs(path, exist_ok=True)
-        for ticker, df in data.items():
-            df.to_csv(os.path.join(path, f'{ticker}_historical.csv'))
-            logger.info(f"Saved {len(df)} days of data for {ticker}")
+        """Save processed data to local storage."""
+        import pickle
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        with open(path, 'wb') as f:
+            pickle.dump(data, f)
+        logger.info(f"Saved processed data to {path}")
+
+    def get_training_data(self, refresh: bool = False, years: int = None) -> Dict[str, pd.DataFrame]:
+        """Load local data if available, otherwise fetch and save new data."""
+        local_data_path = os.path.join('data', 'processed', 'training_data.pkl')
+        if not refresh and os.path.exists(local_data_path):
+            data = self.load_local_data(local_data_path)
+            if data:
+                return data
+        # Otherwise, fetch from APIs
+        data = self.collect_historical_data(years=years)
+        self.save_data(data, local_data_path)
+        return data
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Collect historical stock data from various sources')
