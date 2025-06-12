@@ -19,12 +19,12 @@
 
 4. **Database (`db/supabase.py`)**
    - [x] Set up Supabase/Postgres tables for trades, positions, and equity.
-   - [ ] Test database writes and reads.
-   - [ ] Ensure data consistency.
+   - [x] Test database writes and reads.
+   - [x] Ensure data consistency.
 
 5. **Configuration (`config.py`)**
-   - [ ] Load environment variables securely.
-   - [ ] Add validation for required keys.
+   - [x] Load environment variables securely.
+   - [x] Add validation for required keys.
 
 6. **Utilities (`utils.py`)**
    - [ ] Enhance logging and error handling.

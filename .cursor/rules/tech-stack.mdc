@@ -1,0 +1,15 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+At all times of development, follow this tech stack:
+
+Frontend: Next.js + TypeScript
+Backend: Supabase (Postgres, MCP)
+Design: TailwindCSS + Framer Motion
+Auth: Supabase Auth or Clerk
+Email: Resend or Beehiiv or Mailchimp
+Deploy: Vercel
+Analytics: Google Analytics
+Bot Protection: ReCAPTCHA
