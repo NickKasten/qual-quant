@@ -27,13 +27,13 @@
    - [x] Add validation for required keys.
 
 6. **Utilities (`utils.py`)**
-   - [ ] Enhance logging and error handling.
-   - [ ] Add more utility functions as needed.
+   - [x] Enhance logging and error handling.
+   - [x] Add more utility functions as needed.
 
 7. **Main Loop (`main.py`)**
-   - [ ] Integrate all modules.
-   - [ ] Add cron job or container orchestration (e.g., Docker + cron).
-   - [ ] Test end-to-end flow.
+   - [x] Integrate all modules.
+   - [x] Add cron job or container orchestration (e.g., Docker + cron).
+   - [x] Test end-to-end flow.
 
 8. **Testing & QA**
    - [ ] Write unit tests for each module.
