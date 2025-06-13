@@ -37,8 +37,8 @@
 
 8. **Testing & QA**
    - [x] Write unit tests for each module.
-   - [ ] Perform integration tests.
-   - [ ] Run end-to-end tests.
+   - [x] Perform integration tests.
+   - [x] Run end-to-end tests.
 
 9. **Documentation**
    - [ ] Add docstrings and comments.
