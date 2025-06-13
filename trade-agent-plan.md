@@ -36,7 +36,7 @@
    - [x] Test end-to-end flow.
 
 8. **Testing & QA**
-   - [ ] Write unit tests for each module.
+   - [x] Write unit tests for each module.
    - [ ] Perform integration tests.
    - [ ] Run end-to-end tests.
 

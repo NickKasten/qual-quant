@@ -27,4 +27,10 @@ def generate_signals(data: pd.DataFrame) -> Optional[Dict]:
 
     # Return the latest signal
     latest_signal = data['signal'].iloc[-1]
-    return {'signal': latest_signal, 'data': data.to_dict()} 
+    if latest_signal == 1:
+        side = 'buy'
+    elif latest_signal == -1:
+        side = 'sell'
+    else:
+        side = 'hold'
+    return {'signal': latest_signal, 'side': side, 'data': data.to_dict()} 

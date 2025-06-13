@@ -3,6 +3,7 @@ import os
 import time
 from dotenv import load_dotenv
 from data.fetcher import fetch_ohlcv, cache, CACHE_TTL
+from unittest.mock import patch
 
 # Load environment variables from .env file
 load_dotenv()
@@ -32,6 +33,26 @@ class TestDataFetcher(unittest.TestCase):
         # Test error handling
         os.environ["TIIINGO_API_KEY"] = "invalid_key"
         result = fetch_ohlcv("AAPL")
+        self.assertIsNone(result)
+
+class TestFetcher(unittest.TestCase):
+    @patch('data.fetcher.requests.get')
+    def test_fetch_ohlcv_success(self, mock_get):
+        mock_get.return_value.status_code = 200
+        mock_get.return_value.json.return_value = {'data': 'test_data'}
+        result = fetch_ohlcv()
+        self.assertEqual(result, {'data': 'test_data'})
+
+    @patch('data.fetcher.requests.get')
+    def test_fetch_ohlcv_failure(self, mock_get):
+        mock_get.return_value.status_code = 500
+        result = fetch_ohlcv()
+        self.assertIsNone(result)
+
+    @patch('data.fetcher.requests.get')
+    def test_fetch_ohlcv_exception(self, mock_get):
+        mock_get.side_effect = Exception("Network error")
+        result = fetch_ohlcv()
         self.assertIsNone(result)
 
 if __name__ == "__main__":

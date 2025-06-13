@@ -24,5 +24,29 @@ class TestStrategySignals(unittest.TestCase):
         self.assertIsNotNone(signals)
         self.assertIn('signal', signals)
 
+    def test_generate_signals_valid(self):
+        data = pd.DataFrame({'close': list(range(100, 150))})
+        result = generate_signals(data)
+        self.assertIsInstance(result, dict)
+        self.assertIn('signal', result)
+        self.assertIn('data', result)
+
+    def test_generate_signals_empty(self):
+        data = pd.DataFrame()
+        result = generate_signals(data)
+        self.assertIsNone(result)
+
+    def test_generate_signals_missing_close(self):
+        data = pd.DataFrame({'open': [1, 2, 3]})
+        result = generate_signals(data)
+        self.assertIsNone(result)
+
+    def test_generate_signals_short_data(self):
+        data = pd.DataFrame({'close': [100, 101]})
+        result = generate_signals(data)
+        self.assertIsInstance(result, dict)
+        self.assertIn('signal', result)
+        self.assertIn('data', result)
+
 if __name__ == "__main__":
     unittest.main() 

@@ -1,6 +1,6 @@
 import unittest
-from unittest.mock import patch
-from main import run_trading_cycle
+from unittest.mock import patch, MagicMock
+from main import run_trading_cycle, main
 
 class TestMain(unittest.TestCase):
     @patch('main.load_config')
@@ -12,12 +12,12 @@ class TestMain(unittest.TestCase):
     @patch('main.update_positions')
     @patch('main.update_equity')
     def test_run_trading_cycle_success(self, mock_update_equity, mock_update_positions, mock_update_trades, mock_execute_trade, mock_calculate_position_size, mock_generate_signals, mock_fetch_ohlcv, mock_load_config):
-        mock_load_config.return_value = {'TIIINGO_API_KEY': 'test-key', 'SUPABASE_URL': 'test-url', 'SUPABASE_KEY': 'test-key'}
-        mock_fetch_ohlcv.return_value = {'data': 'test_data'}
-        mock_generate_signals.return_value = {'signal': 'buy'}
+        mock_load_config.return_value = {'TIIINGO_API_KEY': 'test-key', 'SUPABASE_URL': 'test-url', 'SUPABASE_KEY': 'test-key', 'STARTING_EQUITY': 100000}
+        mock_fetch_ohlcv.return_value = MagicMock(empty=False)
+        mock_generate_signals.return_value = {'signal': 'buy', 'side': 'buy'}
         mock_calculate_position_size.return_value = {'size': 10}
         mock_execute_trade.return_value = {'trade': 'success'}
-        run_trading_cycle()
+        run_trading_cycle(symbol="AAPL")
         mock_update_trades.assert_called_once()
         mock_update_positions.assert_called_once()
         mock_update_equity.assert_called_once()
@@ -30,11 +30,27 @@ class TestMain(unittest.TestCase):
     def test_run_trading_cycle_fetch_failure(self, mock_update_equity, mock_update_positions, mock_update_trades, mock_fetch_ohlcv, mock_load_config):
         mock_load_config.return_value = {'TIIINGO_API_KEY': 'test-key', 'SUPABASE_URL': 'test-url', 'SUPABASE_KEY': 'test-key'}
         mock_fetch_ohlcv.return_value = None
-        run_trading_cycle()
+        run_trading_cycle(symbol="AAPL")
         # Verify no updates were made
         self.assertFalse(mock_update_trades.called)
         self.assertFalse(mock_update_positions.called)
         self.assertFalse(mock_update_equity.called)
+
+    @patch('main.run_trading_cycle')
+    @patch('main.argparse.ArgumentParser.parse_args')
+    def test_main_single_run(self, mock_parse_args, mock_run_trading_cycle):
+        mock_parse_args.return_value = MagicMock(symbol="AAPL", loop=False)
+        main()
+        mock_run_trading_cycle.assert_called_once_with("AAPL")
+
+    @patch('main.run_trading_cycle')
+    @patch('main.argparse.ArgumentParser.parse_args')
+    @patch('main.time.sleep')
+    def test_main_loop_mode(self, mock_sleep, mock_parse_args, mock_run_trading_cycle):
+        mock_parse_args.return_value = MagicMock(symbol="AAPL", loop=True, max_loops=1)
+        main()
+        mock_run_trading_cycle.assert_called_with("AAPL")
+        mock_sleep.assert_not_called()
 
 if __name__ == "__main__":
     unittest.main() 
