@@ -41,8 +41,8 @@
    - [x] Run end-to-end tests.
 
 9. **Documentation**
-   - [ ] Add docstrings and comments.
-   - [ ] Create a README with setup and usage instructions.
+   - [x] Add docstrings and comments.
+   - [x] Create a README with setup and usage instructions.
 
 10. **Deployment**
     - [ ] Deploy on Vercel (for the dashboard) and a cloud service (for the bot).
