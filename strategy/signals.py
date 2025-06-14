@@ -2,23 +2,29 @@ import pandas as pd
 import numpy as np
 from typing import Dict, Optional
 
-def generate_signals(data: pd.DataFrame) -> Optional[Dict]:
+def generate_signals(data: pd.DataFrame, use_precalculated: bool = False) -> Optional[Dict]:
     """
     Generate trading signals based on 20/50 SMA crossover and RSI filter (70/30).
+    Returns a dictionary with signal (-1, 0, 1) and side ('buy', 'sell', 'hold').
+    
+    Args:
+        data: DataFrame with OHLCV data
+        use_precalculated: If True, use existing SMA20, SMA50, and RSI columns
     """
     if data.empty or 'close' not in data.columns:
         return None
 
-    # Calculate SMA
-    data['SMA20'] = data['close'].rolling(window=20).mean()
-    data['SMA50'] = data['close'].rolling(window=50).mean()
+    if not use_precalculated:
+        # Calculate SMA
+        data['SMA20'] = data['close'].rolling(window=20).mean()
+        data['SMA50'] = data['close'].rolling(window=50).mean()
 
-    # Calculate RSI
-    delta = data['close'].diff()
-    gain = (delta.where(delta > 0, 0)).rolling(window=14).mean()
-    loss = (-delta.where(delta < 0, 0)).rolling(window=14).mean()
-    rs = gain / loss
-    data['RSI'] = 100 - (100 / (1 + rs))
+        # Calculate RSI
+        delta = data['close'].diff()
+        gain = (delta.where(delta > 0, 0)).rolling(window=14).mean()
+        loss = (-delta.where(delta < 0, 0)).rolling(window=14).mean()
+        rs = gain / loss
+        data['RSI'] = 100 - (100 / (1 + rs))
 
     # Generate signals
     data['signal'] = 0
@@ -33,4 +39,5 @@ def generate_signals(data: pd.DataFrame) -> Optional[Dict]:
         side = 'sell'
     else:
         side = 'hold'
-    return {'signal': latest_signal, 'side': side, 'data': data.to_dict()} 
+    
+    return {'signal': latest_signal, 'side': side} 

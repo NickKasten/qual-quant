@@ -49,26 +49,19 @@ class OrderValidationError(Exception):
     """Custom exception for order validation errors"""
     pass
 
-def validate_order_inputs(position_size: Dict, symbol: str, side: str) -> Tuple[bool, str]:
+def validate_order_inputs(position_size: int, symbol: str, side: str) -> Tuple[bool, str]:
     """
     Validate order inputs before execution.
     Returns (is_valid, error_message)
     """
-    if not position_size or 'position_size' not in position_size:
-        return False, "Invalid position size data"
+    if not isinstance(position_size, int) or position_size <= 0:
+        return False, "Position size must be a positive integer"
     
     if not symbol or not isinstance(symbol, str):
         return False, "Invalid symbol"
     
     if side not in ['buy', 'sell']:
         return False, "Invalid order side. Must be 'buy' or 'sell'"
-    
-    try:
-        quantity = int(position_size['position_size'])
-        if quantity <= 0:
-            return False, "Quantity must be greater than 0"
-    except (ValueError, TypeError):
-        return False, "Invalid quantity value"
     
     return True, ""
 
@@ -81,7 +74,7 @@ def validate_api_credentials() -> Tuple[bool, str]:
         return False, "Missing API credentials"
     return True, ""
 
-def execute_trade(position_size: Dict, symbol: str = "AAPL", side: str = "buy", simulate: bool = True) -> Optional[Dict]:
+def execute_trade(position_size: int, symbol: str = "AAPL", side: str = "buy", simulate: bool = True) -> Optional[Dict]:
     """
     Place a simulated order using the Alpaca paper API or simulate locally.
     Includes comprehensive validation and error handling.
@@ -98,15 +91,13 @@ def execute_trade(position_size: Dict, symbol: str = "AAPL", side: str = "buy", 
         logger.error(f"Order validation error: {error_msg}")
         raise OrderValidationError(error_msg)
 
-    quantity = int(position_size['position_size'])
-
     if simulate:
         # Simulate order execution
         fill_price = simulate_fill_price(symbol)
         trade = {
             'symbol': symbol,
             'side': side,
-            'quantity': quantity,
+            'quantity': position_size,
             'status': 'filled',
             'order_id': f'sim-{random.randint(100000, 999999)}',
             'filled_avg_price': fill_price,
@@ -119,7 +110,7 @@ def execute_trade(position_size: Dict, symbol: str = "AAPL", side: str = "buy", 
 
     order_data = {
         "symbol": symbol,
-        "qty": quantity,
+        "qty": position_size,
         "side": side,
         "type": "market",
         "time_in_force": "day",
@@ -139,7 +130,7 @@ def execute_trade(position_size: Dict, symbol: str = "AAPL", side: str = "buy", 
             trade = {
                 'symbol': symbol,
                 'side': side,
-                'quantity': quantity,
+                'quantity': position_size,
                 'status': order.get('status'),
                 'order_id': order.get('id'),
                 'filled_avg_price': order.get('filled_avg_price'),

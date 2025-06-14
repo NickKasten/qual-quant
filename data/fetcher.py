@@ -2,7 +2,8 @@ import os
 import logging
 import requests
 import time
-from typing import Dict, Optional
+import pandas as pd
+from typing import Optional
 
 logger = logging.getLogger(__name__)
 
@@ -15,9 +16,26 @@ ALPHA_VANTAGE_BASE_URL = "https://www.alphavantage.co/query"
 cache = {}
 CACHE_TTL = 300  # 5 minutes
 
-def fetch_ohlcv(symbol: str = "AAPL") -> Optional[Dict]:
+def _process_tiingo_data(data: list) -> pd.DataFrame:
+    """Convert Tiingo API response to DataFrame"""
+    df = pd.DataFrame(data)
+    df['date'] = pd.to_datetime(df['date'])
+    df.set_index('date', inplace=True)
+    return df
+
+def _process_alpha_vantage_data(data: dict) -> pd.DataFrame:
+    """Convert Alpha Vantage API response to DataFrame"""
+    time_series = data.get('Time Series (Daily)', {})
+    df = pd.DataFrame.from_dict(time_series, orient='index')
+    df.index = pd.to_datetime(df.index)
+    df.columns = ['open', 'high', 'low', 'close', 'volume']
+    df = df.astype(float)
+    return df
+
+def fetch_ohlcv(symbol: str = "AAPL") -> Optional[pd.DataFrame]:
     """
     Fetch OHLCV data from Tiingo (primary) or Alpha Vantage (fallback), with caching.
+    Returns a pandas DataFrame with OHLCV data.
     """
     # Check cache first
     cache_key = f"{symbol}_ohlcv"
@@ -34,8 +52,9 @@ def fetch_ohlcv(symbol: str = "AAPL") -> Optional[Dict]:
             )
             if response.status_code == 200:
                 data = response.json()
-                cache[cache_key] = {'data': data, 'timestamp': time.time()}
-                return data
+                df = _process_tiingo_data(data)
+                cache[cache_key] = {'data': df, 'timestamp': time.time()}
+                return df
         except Exception as e:
             logger.error(f"Error fetching from Tiingo: {e}")
 
@@ -48,8 +67,9 @@ def fetch_ohlcv(symbol: str = "AAPL") -> Optional[Dict]:
             )
             if response.status_code == 200:
                 data = response.json()
-                cache[cache_key] = {'data': data, 'timestamp': time.time()}
-                return data
+                df = _process_alpha_vantage_data(data)
+                cache[cache_key] = {'data': df, 'timestamp': time.time()}
+                return df
         except Exception as e:
             logger.error(f"Error fetching from Alpha Vantage: {e}")
 

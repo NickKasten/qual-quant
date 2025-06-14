@@ -8,6 +8,7 @@ logger = logging.getLogger(__name__)
 
 SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_KEY = os.getenv("SUPABASE_KEY")
+TEST_MODE = os.getenv("TEST_MODE", "false").lower() == "true"
 
 HEADERS = {
     "apikey": SUPABASE_KEY or "",
@@ -25,7 +26,7 @@ def validate_position_data(position_data: Dict) -> bool:
     """
     Validate position data before writing to database.
     """
-    required_fields = ['symbol', 'quantity', 'avg_entry_price']
+    required_fields = ['symbol', 'quantity', 'filled_avg_price']
     return all(field in position_data for field in required_fields)
 
 def validate_equity_data(equity_data: Dict) -> bool:
@@ -115,13 +116,18 @@ def read_equity_history(days: int = 30) -> List[Dict]:
         logger.error(f"Error reading equity history: {e}")
         return []
 
-def update_trades(trade_result: Dict) -> None:
+def update_trades(trade_result: Dict) -> bool:
     """
     Write trade result to Supabase/Postgres.
+    Returns True if successful, False otherwise.
     """
     if not trade_result or not validate_trade_data(trade_result):
         logger.error("Invalid trade data")
-        return
+        return False
+
+    if TEST_MODE:
+        logger.info("Test mode: Skipping trade update")
+        return True
 
     try:
         response = requests.post(
@@ -131,18 +137,26 @@ def update_trades(trade_result: Dict) -> None:
         )
         if response.status_code == 200:
             logger.info("Trade updated successfully")
+            return True
         else:
             logger.error(f"Failed to update trade: {response.text}")
+            return False
     except Exception as e:
         logger.error(f"Error updating trade: {e}")
+        return False
 
-def update_positions(trade_result: Dict) -> None:
+def update_positions(trade_result: Dict) -> bool:
     """
     Write position update to Supabase/Postgres.
+    Returns True if successful, False otherwise.
     """
     if not trade_result or not validate_position_data(trade_result):
         logger.error("Invalid position data")
-        return
+        return False
+
+    if TEST_MODE:
+        logger.info("Test mode: Skipping position update")
+        return True
 
     try:
         response = requests.post(
@@ -152,18 +166,26 @@ def update_positions(trade_result: Dict) -> None:
         )
         if response.status_code == 200:
             logger.info("Position updated successfully")
+            return True
         else:
             logger.error(f"Failed to update position: {response.text}")
+            return False
     except Exception as e:
         logger.error(f"Error updating position: {e}")
+        return False
 
-def update_equity(trade_result: Dict) -> None:
+def update_equity(trade_result: Dict) -> bool:
     """
     Write equity update to Supabase/Postgres.
+    Returns True if successful, False otherwise.
     """
     if not trade_result or not validate_equity_data(trade_result):
         logger.error("Invalid equity data")
-        return
+        return False
+
+    if TEST_MODE:
+        logger.info("Test mode: Skipping equity update")
+        return True
 
     try:
         response = requests.post(
@@ -173,7 +195,10 @@ def update_equity(trade_result: Dict) -> None:
         )
         if response.status_code == 200:
             logger.info("Equity updated successfully")
+            return True
         else:
             logger.error(f"Failed to update equity: {response.text}")
+            return False
     except Exception as e:
-        logger.error(f"Error updating equity: {e}") 
+        logger.error(f"Error updating equity: {e}")
+        return False 
