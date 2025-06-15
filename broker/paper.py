@@ -153,6 +153,8 @@ def execute_trade(position_size: int, symbol: str = "AAPL", side: str = "buy", s
         error_msg = f"Network error while placing order: {str(e)}"
         logger.error(error_msg)
         raise OrderValidationError(error_msg)
+    except OrderValidationError:
+        raise
     except Exception as e:
         error_msg = f"Unexpected error executing trade: {str(e)}"
         logger.error(error_msg)

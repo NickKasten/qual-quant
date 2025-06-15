@@ -5,7 +5,7 @@ from typing import Dict, Optional
 def generate_signals(data: pd.DataFrame, use_precalculated: bool = False) -> Optional[Dict]:
     """
     Generate trading signals based on 20/50 SMA crossover and RSI filter (70/30).
-    Returns a dictionary with signal (-1, 0, 1) and side ('buy', 'sell', 'hold').
+    Returns a dictionary with signal (-1, 0, 1), side ('buy', 'sell', 'hold'), and the processed data.
     
     Args:
         data: DataFrame with OHLCV data
@@ -40,4 +40,8 @@ def generate_signals(data: pd.DataFrame, use_precalculated: bool = False) -> Opt
     else:
         side = 'hold'
     
-    return {'signal': latest_signal, 'side': side} 
+    return {
+        'signal': latest_signal,
+        'side': side,
+        'data': data
+    } 

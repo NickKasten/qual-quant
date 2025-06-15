@@ -11,7 +11,7 @@ class TestBacktest(unittest.TestCase):
             'Low': [95] * 100,
             'Close': [102] * 100,
             'Volume': [1000] * 100
-        })
+        }, index=pd.date_range(start='2024-01-01', periods=100, freq='D'))
 
     def test_backtest(self):
         # Run backtest

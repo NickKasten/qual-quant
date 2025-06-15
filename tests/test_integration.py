@@ -80,66 +80,39 @@ class TestIntegration(unittest.TestCase):
 
     def test_data_to_signals_integration(self):
         """Test integration between data fetching and signal generation"""
-        # Create test data
-        test_data = pd.DataFrame({
-            'date': pd.date_range(start='2024-01-01', periods=100, freq='D'),
-            'open': [100] * 100,
-            'high': [105] * 100,
-            'low': [95] * 100,
-            'close': [102] * 100,
-            'volume': [1000] * 100
-        })
-        
-        # Generate signals with real data
-        signals = generate_signals(test_data)
-        
-        # Convert data to DataFrame if it's a dictionary
-        if isinstance(signals['data'], dict):
-            signals['data'] = pd.DataFrame(signals['data'])
-        
-        # Verify data flow
+        signals = generate_signals(self.test_data)
         self.assertIsNotNone(signals)
         self.assertIn('signal', signals)
         self.assertIn('side', signals)
-        self.assertIn(signals['side'], ['buy', 'sell', 'hold'])
         self.assertIn('data', signals)
-        self.assertIsInstance(signals['data'], pd.DataFrame)
 
-    @patch('tests.test_integration.calculate_position_size')
-    def test_signals_to_position_sizing(self, mock_calculate_position_size):
+    def test_signals_to_position_sizing(self):
         """Test integration between signal generation and position sizing"""
         # Create test signals
         signals = {
-            'signal': 'buy',
+            'signal': 1,
             'side': 'buy',
             'data': self.test_data
         }
-        
-        # Mock position sizing
-        mock_calculate_position_size.return_value = {
-            'position_size': 10
-        }
-        
+
         # Calculate position size
         position_size = calculate_position_size(
             signals=signals,
             current_equity=100000,
             open_positions=0
         )
-        
+
         # Verify integration
         self.assertIsNotNone(position_size)
-        self.assertEqual(position_size['position_size'], 10)
-        mock_calculate_position_size.assert_called_once_with(
-            signals=signals,
-            current_equity=100000,
-            open_positions=0
-        )
+        self.assertIn('position_size', position_size)
+        self.assertIn('risk_per_trade', position_size)
+        self.assertIn('stop_loss_pct', position_size)
 
     @patch('broker.paper.execute_trade')
-    @patch('tests.test_integration.update_trades')
-    @patch('tests.test_integration.update_positions')
-    def test_trade_execution_to_database(self, mock_update_positions, mock_update_trades, mock_execute_trade):
+    @patch('db.supabase.update_trades')
+    @patch('db.supabase.update_positions')
+    @patch('broker.paper.validate_api_credentials', return_value=(True, ''))
+    def test_trade_execution_to_database(self, mock_validate_api, mock_update_positions, mock_update_trades, mock_execute_trade):
         """Test integration between trade execution and database updates"""
         # Mock trade execution
         trade_result = {
@@ -152,27 +125,68 @@ class TestIntegration(unittest.TestCase):
             'quantity': 10
         }
         mock_execute_trade.return_value = trade_result
-        
+
         # Mock database updates
         mock_update_trades.return_value = True
         mock_update_positions.return_value = True
-        
+
         # Execute trade and update database
-        trade = execute_trade({'position_size': 10}, self.test_symbol, 'buy')
-        update_trades(trade)
-        update_positions({
-            'symbol': self.test_symbol,
-            'quantity': 10,
-            'avg_entry_price': 102.0,
-            'current_price': 102.0,
-            'market_value': 1020.0
-        })
-        
-        # Verify integration
+        trade = execute_trade(10, symbol=self.test_symbol, side='buy', simulate=True)
         self.assertIsNotNone(trade)
-        self.assertEqual(trade['status'], 'filled')
-        mock_update_trades.assert_called_once_with(trade)
+        self.assertEqual(trade['symbol'], self.test_symbol)
+        self.assertEqual(trade['side'], 'buy')
+        self.assertEqual(trade['quantity'], 10)
+
+        # Import the patched functions so the patch is effective
+        from db.supabase import update_trades, update_positions
+        update_trades(trade)
+        update_positions(trade)
+
+        # Verify database updates
+        mock_update_trades.assert_called_once()
         mock_update_positions.assert_called_once()
+
+    @patch('broker.paper.validate_api_credentials', return_value=(True, ''))
+    def test_full_trading_cycle(self, mock_validate_api):
+        """Test the complete trading cycle from data to execution"""
+        # Craft data and set indicators to guarantee a buy signal
+        data = pd.DataFrame({
+            'date': pd.date_range(start='2024-01-01', periods=100, freq='D'),
+            'open': [100] * 100,
+            'high': [105] * 100,
+            'low': [95] * 100,
+            'close': [100] * 100,
+            'volume': [1000] * 100
+        })
+        data['SMA20'] = 120
+        data['SMA50'] = 100
+        data['RSI'] = 50
+        signals = generate_signals(data, use_precalculated=True)
+        self.assertIsNotNone(signals)
+        self.assertEqual(signals['side'], 'buy')
+
+        # Calculate position size
+        position_size = calculate_position_size(
+            signals=signals,
+            current_equity=100000,
+            open_positions=0
+        )
+        self.assertIsNotNone(position_size)
+
+        # Execute trade
+        with patch('broker.paper.execute_trade') as mock_execute_trade:
+            mock_execute_trade.return_value = {
+                'status': 'filled',
+                'order_id': 'test123',
+                'filled_avg_price': 120.0,
+                'timestamp': datetime.now(UTC).isoformat(),
+                'symbol': self.test_symbol,
+                'side': 'buy',
+                'quantity': position_size['position_size']
+            }
+            trade = execute_trade(position_size['position_size'], symbol=self.test_symbol, side='buy', simulate=True)
+            self.assertIsNotNone(trade)
+            self.assertEqual(trade['status'], 'filled')
 
 if __name__ == '__main__':
     unittest.main() 

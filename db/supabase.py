@@ -27,7 +27,13 @@ def validate_position_data(position_data: Dict) -> bool:
     Validate position data before writing to database.
     """
     required_fields = ['symbol', 'quantity', 'filled_avg_price']
-    return all(field in position_data for field in required_fields)
+    if not all(field in position_data for field in required_fields):
+        return False
+    try:
+        float(position_data['filled_avg_price'])
+        return True
+    except (ValueError, TypeError):
+        return False
 
 def validate_equity_data(equity_data: Dict) -> bool:
     """
@@ -70,10 +76,10 @@ def read_trades(symbol: Optional[str] = None, limit: int = 100) -> List[Dict]:
             return response.json()
         else:
             logger.error(f"Failed to read trades: {response.text}")
-            return []
+            return None
     except Exception as e:
         logger.error(f"Error reading trades: {e}")
-        return []
+        return None
 
 def read_positions(symbol: Optional[str] = None) -> List[Dict]:
     """

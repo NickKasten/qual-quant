@@ -3,10 +3,10 @@ from typing import Dict, Optional
 
 logger = logging.getLogger(__name__)
 
-def calculate_position_size(signals: Dict, current_equity: float, open_positions: int) -> Optional[int]:
+def calculate_position_size(signals: Dict, current_equity: float, open_positions: int) -> Optional[Dict]:
     """
     Calculate position size based on 2% equity per trade, 5% stop-loss, and max 3 open positions.
-    Returns the number of shares to trade as an integer.
+    Returns a dictionary containing the position size and metadata.
     """
     logger.info(f"Calculating position size with signals: {signals}, equity: {current_equity}, open positions: {open_positions}")
     
@@ -31,4 +31,8 @@ def calculate_position_size(signals: Dict, current_equity: float, open_positions
     position_size = int(risk_per_trade / stop_loss_pct)  # Convert to integer
     
     logger.info(f"Calculated position size: {position_size}")
-    return position_size 
+    return {
+        'position_size': position_size,
+        'risk_per_trade': risk_per_trade,
+        'stop_loss_pct': stop_loss_pct
+    } 
