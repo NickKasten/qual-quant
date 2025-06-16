@@ -2,17 +2,42 @@
 **TOTAL HARD-RESETS: 2**
 
 ## Project Overview
-An end-to-end, transparent sandbox where an AI trading bot generates simulated trades (via Alpaca paper trading) and broadcasts its portfolio, trade log, and performance through a public web dashboard. The bot implements a simple but effective trading strategy using SMA/RSI crossovers with strict risk management.
+An end-to-end, **transparent sandbox** where an AI trading bot generates simulated trades (via Alpaca paper trading) and broadcasts its portfolio, trade log, and performance through a public web dashboard. The bot implements a simple but effective trading strategy using SMA/RSI crossovers with strict risk management. This project is designed to be educational and transparent, not advisory.
+
+## Project Status
+- ✅ Backend trading bot (In Progress)
+- ✅ Database setup (In Progress)
+- 🚧 Frontend dashboard (Planned)
+- 🚧 Edge API (Planned)
 
 ## Core Features
 - 🤖 AI-powered trading bot using 20/50-day SMA crossover + RSI (70/30) strategy
-- 📊 Live dashboard with portfolio tracking and equity curve
-- 📈 Performance visualization vs. S&P 500
-- 📝 Real-time trade feed with detailed order information
+- 📊 Live dashboard with portfolio tracking and equity curve (Coming Soon)
+- 📈 Performance visualization vs. S&P 500 (delayed) (Coming Soon)
+- 📝 Real-time trade feed with detailed order information (Coming Soon)
 - ⚡ 15-minute delayed market data from Tiingo/Alpha Vantage
 - 🔒 Paper trading only - no real capital at risk
 - 📊 Comprehensive backtesting and performance metrics
 - 🔄 Automated trading cycle every 5 minutes
+- 🎯 Edge API for fast, global dashboard access (Coming Soon)
+- 📱 Responsive design with WCAG 2.1 AA compliance (Coming Soon)
+
+## System Architecture
+
+```mermaid
+graph TD
+    subgraph Backend [In Progress]
+        A[AI Trading Bot (Docker + Python)] -- writes --> B[Supabase /Postgres]
+        C[Market-Data Fetcher] -- writes --> B
+    end
+    subgraph API Edge [Planned]
+        D[Read-Only JSON Endpoints] -- fetch --> B
+    end
+    subgraph Frontend [Planned]
+        E[Next.js Site (Vercel)] -- request --> D
+    end
+    F(User Browser) -- HTTPS --> E
+```
 
 ## Setup Instructions
 
@@ -85,11 +110,44 @@ pytest tests/
 ```
 
 ## Technical Stack
-- Backend: Python (FastAPI)
-- Frontend: Next.js
-- Database: Supabase/Postgres
+- Backend: Python (FastAPI) [In Progress]
+- Frontend: Next.js (Vercel) [Planned]
+- Database: Supabase/Postgres [In Progress]
+- API: Edge Functions (FastAPI) [Planned]
 - Data Sources: Tiingo (primary), Alpha Vantage (backup)
-- Deployment: Vercel (Frontend), Docker (Backend)
+- Deployment: Vercel (Frontend + API) [Planned], Docker (Backend) [In Progress]
+
+## Planned Dashboard Features
+
+### Home / Dashboard
+- Portfolio table with current positions
+- Real-time equity and P/L tracking
+- Delayed market data timestamp
+- Performance metrics
+
+### Performance Chart
+- Equity curve visualization
+- S&P 500 comparison
+- Interactive time range selection
+- Key performance indicators
+
+### Trade Feed
+- Chronological trade history
+- Detailed order information
+- Fill prices and timestamps
+- Trade rationale
+
+### Signal Panel
+- Current SMA/RSI signals
+- Strategy status
+- Market conditions
+- Risk metrics
+
+### About / Methodology
+- Strategy explanation
+- Data sources
+- Risk management rules
+- Performance history
 
 ## Repository Architecture
 
@@ -196,6 +254,7 @@ graph TD
 - Integration tests for data flow
 - End-to-end tests for trading cycle
 - Performance benchmarks
+- Accessibility testing (WCAG 2.1 AA) [Planned]
 
 ## Contributing
 1. Fork the repository
@@ -208,4 +267,4 @@ graph TD
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 ## Disclaimer
-This is an educational project for paper trading only. All trades are simulated and no real capital is at risk. Prices are delayed by at least 15 minutes. This project is not financial advice and should not be used for real trading without proper risk assessment and professional guidance.
+Simulated paper-trading results. Prices delayed ≥ 15 minutes. Educational content only — *not* investment advice. This project is for educational purposes only and should not be used for real trading without proper risk assessment and professional guidance.
