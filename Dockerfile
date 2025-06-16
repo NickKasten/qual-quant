@@ -14,7 +14,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Create startup script in /tmp first
 RUN echo '#!/bin/bash' > /tmp/start.sh && \
     echo 'echo "Checking environment variables..."' >> /tmp/start.sh && \
-    echo 'echo "TIIINGO_API_KEY: ${TIIINGO_API_KEY:+set}"' >> /tmp/start.sh && \
+    echo 'echo "TIINGO_API_KEY: ${TIINGO_API_KEY:+set}"' >> /tmp/start.sh && \
     echo 'echo "ALPHA_VANTAGE_API_KEY: ${ALPHA_VANTAGE_API_KEY:+set}"' >> /tmp/start.sh && \
     echo 'echo "ALPACA_API_KEY: ${ALPACA_API_KEY:+set}"' >> /tmp/start.sh && \
     echo 'echo "ALPACA_SECRET_KEY: ${ALPACA_SECRET_KEY:+set}"' >> /tmp/start.sh && \

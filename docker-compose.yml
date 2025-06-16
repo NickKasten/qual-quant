@@ -6,7 +6,7 @@ services:
     volumes:
       - .:/app
     environment:
-      - TIIINGO_API_KEY=${TIIINGO_API_KEY}
+      - TIINGO_API_KEY=${TIINGO_API_KEY}
       - ALPHA_VANTAGE_API_KEY=${ALPHA_VANTAGE_API_KEY}
       - ALPACA_API_KEY=${ALPACA_API_KEY}
       - ALPACA_SECRET_KEY=${ALPACA_SECRET_KEY}

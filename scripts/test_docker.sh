@@ -10,7 +10,7 @@ echo "Testing container environment variables..."
 docker compose run --rm trading-bot python -c "
 import os
 required_vars = [
-    'TIIINGO_API_KEY',
+    'TIINGO_API_KEY',
     'ALPHA_VANTAGE_API_KEY',
     'ALPACA_API_KEY',
     'ALPACA_SECRET_KEY',
