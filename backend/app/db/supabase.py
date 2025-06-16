@@ -3,6 +3,8 @@ import logging
 import requests
 from typing import Dict, List, Optional
 from datetime import datetime, UTC
+from supabase import create_client, Client
+from ..core.config import load_config
 
 logger = logging.getLogger(__name__)
 
@@ -14,6 +16,27 @@ HEADERS = {
     "apikey": SUPABASE_KEY or "",
     "Content-Type": "application/json"
 }
+
+_supabase_client: Optional[Client] = None
+
+def get_supabase_client() -> Client:
+    """
+    Get or create a Supabase client instance.
+    Uses singleton pattern to avoid creating multiple clients.
+    """
+    global _supabase_client
+    
+    if _supabase_client is None:
+        config = load_config()
+        url = config.get("SUPABASE_URL")
+        key = config.get("SUPABASE_KEY")
+        
+        if not url or not key:
+            raise ValueError("SUPABASE_URL and SUPABASE_KEY must be set in environment variables")
+        
+        _supabase_client = create_client(url, key)
+    
+    return _supabase_client
 
 def validate_trade_data(trade_data: Dict) -> bool:
     """

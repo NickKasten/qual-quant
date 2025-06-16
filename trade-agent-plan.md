@@ -23,27 +23,27 @@
    - [x] Ensure data consistency.
 
 5. **API Layer (`api/`)**
-   - [ ] FastAPI Implementation
-     - [ ] Set up FastAPI project structure
-     - [ ] Implement CORS middleware
-     - [ ] Add rate limiting
-     - [ ] Set up error handling
-   - [ ] Endpoints
-     - [ ] GET /api/portfolio - Current portfolio state
-     - [ ] GET /api/trades - Trade history with pagination
-     - [ ] GET /api/performance - Equity curve data
-     - [ ] GET /api/signals - Current trading signals
-     - [ ] GET /api/status - System status and data delay info
-   - [ ] Supabase Integration
-     - [ ] Set up Supabase client
-     - [ ] Implement connection pooling
-     - [ ] Add query optimization
-     - [ ] Set up real-time subscriptions
-   - [ ] Security
-     - [ ] Implement API key authentication
-     - [ ] Add request validation
-     - [ ] Set up rate limiting
-     - [ ] Configure CORS policies
+   - [x] FastAPI Implementation
+     - [x] Set up FastAPI project structure
+     - [x] Implement CORS middleware
+     - [x] Add rate limiting
+     - [x] Set up error handling
+   - [x] Endpoints
+     - [x] GET /api/portfolio - Current portfolio state
+     - [x] GET /api/trades - Trade history with pagination
+     - [x] GET /api/performance - Equity curve data
+     - [x] GET /api/signals - Current trading signals
+     - [x] GET /api/status - System status and data delay info
+   - [x] Supabase Integration
+     - [x] Set up Supabase client
+     - [x] Implement connection pooling
+     - [x] Add query optimization
+     - [x] Set up real-time subscriptions
+   - [x] Security
+     - [x] Implement API key authentication
+     - [x] Add request validation
+     - [x] Set up rate limiting
+     - [x] Configure CORS policies
    - [ ] Testing
      - [ ] Unit tests for endpoints
      - [ ] Integration tests with Supabase
