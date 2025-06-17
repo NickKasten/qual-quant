@@ -32,8 +32,8 @@ class DatabaseOperations:
         query = self.client.table('trades').select('*')
         if symbol:
             query = query.eq('symbol', symbol)
-        result = query.order('timestamp', desc=True).limit(limit).offset(offset).execute()
-        return [Trade(**trade) for trade in result]
+        result = query.order('timestamp', desc=True).range(offset, offset+limit-1).execute()
+        return [Trade(**trade) for trade in result.data]
 
     def update_position(self, position: Position) -> Position:
         """Update or create a position using upsert."""
@@ -48,7 +48,7 @@ class DatabaseOperations:
     def get_positions(self) -> List[Position]:
         """Get all current positions."""
         result = self.client.table('positions').select('*').execute()
-        return [Position(**pos) for pos in result]
+        return [Position(**pos) for pos in result.data]
 
     def record_equity(self, equity: Equity) -> Equity:
         """Record equity curve data point with upsert on timestamp."""
@@ -72,7 +72,7 @@ class DatabaseOperations:
         if end_time:
             query = query.lte('timestamp', end_time.isoformat())
         result = query.order('timestamp').execute()
-        return [Equity(**equity) for equity in result]
+        return [Equity(**equity) for equity in result.data]
 
     def create_signal(self, signal: Signal) -> Signal:
         """Create a new trading signal with upsert on composite key."""
@@ -94,4 +94,4 @@ class DatabaseOperations:
         if symbol:
             query = query.eq('symbol', symbol)
         result = query.order('timestamp', desc=True).limit(limit).execute()
-        return [Signal(**signal) for signal in result] 
+        return [Signal(**signal) for signal in result.data] 
