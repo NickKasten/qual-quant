@@ -101,20 +101,24 @@ docker-compose up -d
 
 #### Manual Start (Main Trading Loop)
 ```bash
-python backend/app/bot_runner.py
+PYTHONPATH=. python backend/app/bot_runner.py
 ```
 
 #### Automated 5-Minute Trading Cycle (Cron Job)
 - The project includes a `crontab` file that runs the trading loop every 5 minutes:
   ```cron
-  */5 * * * * cd /app && python backend/app/bot_runner.py >> /app/logs/cron.log 2>&1
+  */5 * * * * cd /app && PYTHONPATH=/app python backend/app/bot_runner.py >> /app/logs/cron.log 2>&1
   ```
 - You can install this cron job or use Docker Compose for scheduled runs.
 
 ### Running Tests
 - All backend tests must pass before deployment or further development.
 - The test suite automatically loads your `.env` file (using `python-dotenv` in `conftest.py`).
-- To run all tests:
+- To run all tests **with Docker Compose** (recommended for production parity):
+```bash
+docker-compose run --entrypoint "" trading-bot env PYTHONPATH=/app pytest backend/tests --maxfail=5 --disable-warnings -v
+```
+- To run all tests **locally**:
 ```bash
 pytest backend/tests --maxfail=5 --disable-warnings -v
 ```

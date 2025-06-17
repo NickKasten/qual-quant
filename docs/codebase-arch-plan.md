@@ -40,3 +40,12 @@ vibe-trading/
 ├── .gitignore
 ├── README.md
 └── pyproject.toml            # Shared Python config (backend & bot)
+
+**Docker Compose Note:**
+For all backend test and app runs inside Docker Compose, you must set `PYTHONPATH=/app` to ensure the `backend` and `bot` modules are importable. Example for tests:
+
+```
+docker-compose run --entrypoint "" trading-bot env PYTHONPATH=/app pytest backend/tests
+```
+
+If you see `ModuleNotFoundError: No module named 'backend'` or 'bot', check that `PYTHONPATH` is set correctly.
