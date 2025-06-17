@@ -5,8 +5,8 @@
 An end-to-end, **transparent sandbox** where an AI trading bot generates simulated trades (via Alpaca paper trading) and broadcasts its portfolio, trade log, and performance through a public web dashboard. The bot implements a simple but effective trading strategy using SMA/RSI crossovers with strict risk management. This project is designed to be educational and transparent, not advisory.
 
 ## Project Status
-- ✅ Backend trading bot (In Progress)
-- ✅ Database setup (In Progress)
+- ✅ Backend trading bot (Step 1 Complete)
+- ✅ Database setup (Complete)
 - 🚧 Frontend dashboard (Planned)
 - 🚧 Edge API (Planned)
 
@@ -18,7 +18,7 @@ An end-to-end, **transparent sandbox** where an AI trading bot generates simulat
 - ⚡ 15-minute delayed market data from Tiingo/Alpha Vantage
 - 🔒 Paper trading only - no real capital at risk
 - 📊 Comprehensive backtesting and performance metrics
-- 🔄 Automated trading cycle every 5 minutes
+- 🔄 Automated trading cycle every 5 minutes (via cron job or Docker)
 - 🎯 Edge API for fast, global dashboard access (Coming Soon)
 - 📱 Responsive design with WCAG 2.1 AA compliance (Coming Soon)
 
@@ -26,7 +26,7 @@ An end-to-end, **transparent sandbox** where an AI trading bot generates simulat
 
 ```mermaid
 graph TD
-    subgraph Backend [In Progress]
+    subgraph Backend [Complete]
         A[AI Trading Bot (Docker + Python)] -- writes --> B[Supabase /Postgres]
         C[Market-Data Fetcher] -- writes --> B
     end
@@ -87,9 +87,9 @@ source venv/bin/activate  # On Windows: venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
-4. Set up the database:
+4. Set up the database (apply schema.sql to your Supabase/Postgres instance):
 ```bash
-python scripts/setup_db.py
+psql $SUPABASE_URL < backend/app/db/schema.sql
 ```
 
 ### Running the Bot
@@ -99,78 +99,69 @@ python scripts/setup_db.py
 docker-compose up -d
 ```
 
-#### Manual Start
+#### Manual Start (Main Trading Loop)
 ```bash
-python main.py
+python backend/app/bot_runner.py
 ```
 
+#### Automated 5-Minute Trading Cycle (Cron Job)
+- The project includes a `crontab` file that runs the trading loop every 5 minutes:
+  ```cron
+  */5 * * * * cd /app && python backend/app/bot_runner.py >> /app/logs/cron.log 2>&1
+  ```
+- You can install this cron job or use Docker Compose for scheduled runs.
+
 ### Running Tests
+- All backend tests must pass before deployment or further development.
+- The test suite automatically loads your `.env` file (using `python-dotenv` in `conftest.py`).
+- To run all tests:
 ```bash
-pytest tests/
+pytest backend/tests --maxfail=5 --disable-warnings -v
+```
+- If you encounter environment variable issues, run with explicit env vars:
+```bash
+SUPABASE_URL=your_supabase_url SUPABASE_KEY=your_supabase_key pytest backend/tests --maxfail=5 --disable-warnings -v
 ```
 
 ## Technical Stack
-- Backend: Python (FastAPI) [In Progress]
+- Backend: Python (FastAPI, modular, see backend/app/ and bot/)
 - Frontend: Next.js (Vercel) [Planned]
-- Database: Supabase/Postgres [In Progress]
+- Database: Supabase/Postgres
 - API: Edge Functions (FastAPI) [Planned]
 - Data Sources: Tiingo (primary), Alpha Vantage (backup)
-- Deployment: Vercel (Frontend + API) [Planned], Docker (Backend) [In Progress]
+- Deployment: Vercel (Frontend + API) [Planned], Docker (Backend)
 
-## Planned Dashboard Features
-
-### Home / Dashboard
-- Portfolio table with current positions
-- Real-time equity and P/L tracking
-- Delayed market data timestamp
-- Performance metrics
-
-### Performance Chart
-- Equity curve visualization
-- S&P 500 comparison
-- Interactive time range selection
-- Key performance indicators
-
-### Trade Feed
-- Chronological trade history
-- Detailed order information
-- Fill prices and timestamps
-- Trade rationale
-
-### Signal Panel
-- Current SMA/RSI signals
-- Strategy status
-- Market conditions
-- Risk metrics
-
-### About / Methodology
-- Strategy explanation
-- Data sources
-- Risk management rules
-- Performance history
+## Backend API & Data Model Updates
+- All API endpoints now include a `data_delay_minutes` field and a legal `disclaimer` in their JSON responses.
+- Backend endpoints are in `backend/app/api/endpoints/`.
+- Market data fetcher is in `backend/app/services/fetcher.py`.
+- Risk management logic is in `bot/risk/risk.py`.
+- Main trading loop is in `backend/app/bot_runner.py` (called by cron or manually).
+- All upserts (positions, equity, signals) require unique constraints in the DB schema (see `backend/app/db/schema.sql`).
+- Trade creation requires a unique, non-null `order_id`.
 
 ## Repository Architecture
 
 ```mermaid
 graph TD
     subgraph Core
-        Main[main.py] --> Config[config.py]
+        Main[bot_runner.py] --> Config[config.py]
         Main --> Utils[utils.py]
     end
 
     subgraph Data Layer
-        Fetcher[data/fetcher.py] --> |OHLCV Data| Signals
+        Fetcher[services/fetcher.py] --> |OHLCV Data| Signals
         Fetcher --> |Historical Data| Backtest
     end
 
     subgraph Strategy Layer
-        Signals[strategy/signals.py] --> |Buy/Sell Signals| Paper
-        Risk[strategy/risk.py] --> |Position Sizing| Paper
-        Backtest[strategy/backtest.py] --> |Strategy Validation| Signals
+        Signals[bot/strategy/signals.py] --> |Buy/Sell Signals| Paper
+        Risk[bot/risk/risk.py] --> |Position Sizing| Paper
+        Backtest[bot/backtest/backtest.py] --> |Strategy Validation| Signals
     end
 
     subgraph Broker Layer
-        Paper[broker/paper.py] --> |Trade Execution| DB
+        Paper[services/broker/paper.py] --> |Trade Execution| DB
     end
 
     subgraph Database Layer
@@ -178,7 +169,7 @@ graph TD
     end
 
     subgraph Testing
-        Tests[tests/] --> |Unit Tests| Signals
+        Tests[backend/tests/] --> |Unit Tests| Signals
         Tests --> |Integration Tests| Paper
         Tests --> |Data Tests| Fetcher
     end
@@ -200,10 +191,10 @@ graph TD
 ## Module Documentation
 
 ### Core Modules
-- `main.py` - Entry point and orchestration of the trading bot
-  - Implements the main trading loop
+- `bot_runner.py` - Main trading loop and orchestration
+  - Runs the 5-minute trading cycle (via cron or manual run)
   - Handles error recovery and logging
-  - Manages the 5-minute trading cycle
+  - Integrates data fetch, signal generation, risk management, and trade execution
 
 - `config.py` - Configuration management
   - Environment variable validation
@@ -216,29 +207,30 @@ graph TD
   - Helper functions
 
 ### Data Layer
-- `data/fetcher.py` - Market data management
+- `services/fetcher.py` - Market data management
   - Rate-limited API calls
   - Data caching
   - Fallback data sources
+  - Retry/backoff logic
 
 ### Strategy Layer
-- `strategy/signals.py` - Trading signals
+- `bot/strategy/signals.py` - Trading signals
   - 20/50-day SMA crossover logic
   - RSI (70/30) filter
   - Signal generation
 
-- `strategy/risk.py` - Risk management
+- `bot/risk/risk.py` - Risk management
   - 2% account equity per trade
   - 5% stop-loss implementation
   - Maximum 3 open positions
 
-- `strategy/backtest.py` - Strategy validation
+- `bot/backtest/backtest.py` - Strategy validation
   - Historical performance analysis
   - Sharpe ratio calculation
   - Strategy optimization
 
 ### Broker Layer
-- `broker/paper.py` - Alpaca integration
+- `services/broker/paper.py` - Alpaca integration
   - Paper trading execution
   - Position management
   - Order validation
@@ -250,21 +242,20 @@ graph TD
   - Performance metrics
 
 ## Testing
-- Unit tests for each module
-- Integration tests for data flow
-- End-to-end tests for trading cycle
-- Performance benchmarks
-- Accessibility testing (WCAG 2.1 AA) [Planned]
+- Unit, integration, and end-to-end tests for all backend modules
+- `.env` is loaded automatically for tests (see `conftest.py`)
+- All tests must pass before deployment or further development
+- Run tests with:
+```bash
+pytest backend/tests --maxfail=5 --disable-warnings -v
+```
 
-## Contributing
-1. Fork the repository
-2. Create a feature branch
-3. Commit your changes
-4. Push to the branch
-5. Create a Pull Request
-
-## License
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+## Database Schema Notes
+- All upserts require unique constraints (see `backend/app/db/schema.sql`)
+- `trades.order_id` must be unique and non-null
+- `positions.symbol` is unique
+- `equity.timestamp` is unique
+- `signals.(symbol, timestamp, strategy)` is a composite unique constraint
 
 ## Disclaimer
 Simulated paper-trading results. Prices delayed ≥ 15 minutes. Educational content only — *not* investment advice. This project is for educational purposes only and should not be used for real trading without proper risk assessment and professional guidance.

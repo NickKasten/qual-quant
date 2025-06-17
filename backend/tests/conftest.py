@@ -5,6 +5,10 @@ import pandas as pd
 from datetime import datetime, timezone
 import sys
 from pathlib import Path
+from dotenv import load_dotenv
+
+# Load .env file from project root
+load_dotenv(dotenv_path=os.path.join(os.path.dirname(__file__), '../../.env'))
 
 # Add the backend directory to the Python path
 backend_dir = Path(__file__).parent.parent
@@ -19,8 +23,8 @@ def setup_test_env():
         'ALPHA_VANTAGE_API_KEY': 'test_alpha_vantage_key',
         'ALPACA_API_KEY': 'test_alpaca_key',
         'ALPACA_SECRET_KEY': 'test_alpaca_secret',
-        'SUPABASE_URL': 'test_supabase_url',
-        'SUPABASE_KEY': 'test_supabase_key',
+        'SUPABASE_URL': os.environ.get('SUPABASE_URL', 'test_supabase_url'),
+        'SUPABASE_KEY': os.environ.get('SUPABASE_KEY', 'test_supabase_key'),
         'TEST_MODE': 'true',
         'MAX_POSITIONS': '3',
         'RISK_PER_TRADE': '0.02',

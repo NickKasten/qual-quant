@@ -1,4 +1,4 @@
-ai-trading-bot-dashboard/
+vibe-trading/
 │
 ├── backend/                  # FastAPI application
 │   ├── app/

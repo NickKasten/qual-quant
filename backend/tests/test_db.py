@@ -1,6 +1,7 @@
 import pytest
 from datetime import datetime, timedelta
 import os
+import uuid
 from app.db.models import Trade, Position, Equity, Signal
 from app.db.operations import DatabaseOperations
 from app.db.client import DatabaseClient
@@ -21,7 +22,7 @@ def db_ops():
 def test_create_and_get_trade(db_ops):
     """Test creating and retrieving a trade."""
     trade = Trade(
-        order_id="test-order-123",
+        order_id=f"test-order-{uuid.uuid4()}",
         symbol="AAPL",
         side="buy",
         quantity=10.0,
