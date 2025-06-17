@@ -21,6 +21,7 @@ def db_ops():
 def test_create_and_get_trade(db_ops):
     """Test creating and retrieving a trade."""
     trade = Trade(
+        order_id="test-order-123",
         symbol="AAPL",
         side="buy",
         quantity=10.0,

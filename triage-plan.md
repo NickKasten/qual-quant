@@ -91,16 +91,19 @@
 ## Next Steps
 
 1. [ ] Implement the missing backend features (cron, data fetcher, risk enforcement, API fields, retry logic).
-    - [ ] **Cron/Loop for 5-Minute Bot Run**: Create a script to run the bot loop and set up a cron job or background scheduler to execute it every 5 minutes.
-    - [ ] **Market Data Fetcher**: Implement or complete the fetcher module to retrieve OHLCV data from providers (e.g., yfinance), with retry/backoff logic.
-    - [ ] **Risk Model Enforcement**: Ensure 2% equity per trade, 5% stop-loss, and max 3 open positions are enforced in the bot logic.
-    - [ ] **API Field for `data_delay_minutes`**: Add this field to relevant API responses and update models and logic accordingly.
-    - [ ] **Retry/Backoff Logic for API Errors**: Add retry and backoff logic to all critical external API calls (data fetch, trade execution).
-    - [ ] **Legal Disclaimer in API Responses**: Add a legal disclaimer field to all API responses and update models and logic.
-    - [ ] **Edge API Separation (Optional/Stretch)**: Document FastAPI's limitations for edge, and scaffold a placeholder if needed.
-    - [ ] **Fix DB test failures**: Update result handling for Supabase client API, check DB schema for upsert constraints, and resolve test errors.
-    - [ ] **(Optional) Add/expand tests for bot runner and cron integration**: Ensure the new trading loop and cron job are covered by tests.
+    - [x] **Cron/Loop for 5-Minute Bot Run**: Create a script to run the bot loop and set up a cron job or background scheduler to execute it every 5 minutes.
+    - [x] **Market Data Fetcher**: Implement or complete the fetcher module to retrieve OHLCV data from providers (e.g., yfinance), with retry/backoff logic.
+    - [x] **Risk Model Enforcement**: Ensure 2% equity per trade, 5% stop-loss, and max 3 open positions are enforced in the bot logic.
+    - [x] **API Field for `data_delay_minutes`**: Add this field to relevant API responses and update models and logic accordingly.
+    - [x] **Retry/Backoff Logic for API Errors**: Add retry and backoff logic to all critical external API calls (data fetch, trade execution).
+    - [x] **Legal Disclaimer in API Responses**: Add a legal disclaimer field to all API responses and update models and logic.
+    - [x] **Edge API Separation (Optional/Stretch)**: Document FastAPI's limitations for edge, and scaffold a placeholder if needed.
+    - [x] **Fix DB test failures**: Update result handling for Supabase client API, check DB schema for upsert constraints, and resolve test errors.
+    - [x] **(Optional) Add/expand tests for bot runner and cron integration**: Ensure the new trading loop and cron job are covered by tests.
     - [ ] **Update documentation**: Document new backend features and cron job integration.
+    - [ ] **Fix remaining test errors**:
+        - [ ] Update Trade creation and tests to always provide a unique, non-null order_id.
+        - [ ] Set valid SUPABASE_URL and SUPABASE_KEY in test environment.
 2. [ ] Scaffold and build the entire frontend.
 3. [ ] Add legal disclaimers everywhere.
 4. [ ] Add missing tests (especially frontend and E2E).

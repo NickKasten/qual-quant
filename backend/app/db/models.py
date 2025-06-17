@@ -5,6 +5,7 @@ from pydantic import BaseModel, Field
 class Trade(BaseModel):
     """Model for trade records."""
     id: Optional[int] = None
+    order_id: str  # Now required, matches DB schema
     symbol: str
     side: str  # 'buy' or 'sell'
     quantity: float
