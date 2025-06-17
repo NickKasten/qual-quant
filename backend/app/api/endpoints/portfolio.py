@@ -3,7 +3,7 @@ from slowapi import Limiter
 from slowapi.util import get_remote_address
 from typing import Dict, Any
 from ...db.supabase import get_supabase_client
-from ...core.config import load_config
+from ...core.config import load_config, LEGAL_DISCLAIMER
 
 router = APIRouter()
 limiter = Limiter(key_func=get_remote_address)
@@ -33,7 +33,8 @@ async def get_portfolio(request: Request):
             "current_equity": current_equity.get("equity", 0),
             "total_pl": total_pl,
             "timestamp": current_equity.get("timestamp"),
-            "data_delay_minutes": 15  # As per PRD requirement
+            "data_delay_minutes": 15,  # As per PRD requirement
+            "disclaimer": LEGAL_DISCLAIMER
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) 

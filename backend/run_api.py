@@ -1,18 +1,41 @@
 import uvicorn
-from app.core.config import load_config
+import logging
+from pathlib import Path
+from app.core.config import get_settings
+from app.db.init_db import init_database
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.StreamHandler(),
+        logging.FileHandler(Path(__file__).parent / 'logs' / 'api.log')
+    ]
+)
+logger = logging.getLogger(__name__)
 
 def main():
-    config = load_config()
-    host = config.get("API_HOST", "0.0.0.0")
-    port = int(config.get("API_PORT", "8000"))
-    
-    uvicorn.run(
-        "app.api.main:app",
-        host=host,
-        port=port,
-        reload=True,  # Enable auto-reload during development
-        log_level="info"
-    )
+    try:
+        # Load configuration
+        settings = get_settings()
+        logger.info("Configuration loaded successfully")
+        
+        # Initialize database
+        if not init_database():
+            logger.error("Failed to initialize database")
+            return
+        
+        # Start API server
+        uvicorn.run(
+            "app.api.main:app",
+            host=settings.API_HOST,
+            port=settings.API_PORT,
+            reload=settings.DEBUG,
+            log_level="info"
+        )
+    except Exception as e:
+        logger.error(f"API server startup failed: {e}", exc_info=True)
 
 if __name__ == "__main__":
     main() 

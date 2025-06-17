@@ -5,6 +5,7 @@ from typing import Dict, Any
 from ...db.supabase import get_supabase_client
 from bot.strategy.signals import generate_signals
 from ...services.fetcher import fetch_ohlcv
+from ...core.config import LEGAL_DISCLAIMER
 
 router = APIRouter()
 limiter = Limiter(key_func=get_remote_address)
@@ -39,7 +40,8 @@ async def get_signals(request: Request):
         return {
             "signals": signals_data,
             "timestamp": ohlcv_data.index[-1].isoformat() if ohlcv_data is not None and not ohlcv_data.empty else None,
-            "data_delay_minutes": 15  # As per PRD requirement
+            "data_delay_minutes": 15,  # As per PRD requirement
+            "disclaimer": LEGAL_DISCLAIMER
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) 

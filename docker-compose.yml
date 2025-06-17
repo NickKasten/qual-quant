@@ -1,10 +1,10 @@
-version: '3'
+version: '3.8'
 
 services:
   trading-bot:
-    build: .
-    volumes:
-      - .:/app
+    build:
+      context: .
+      dockerfile: Dockerfile
     environment:
       - TIINGO_API_KEY=${TIINGO_API_KEY}
       - ALPHA_VANTAGE_API_KEY=${ALPHA_VANTAGE_API_KEY}

@@ -4,6 +4,7 @@ from slowapi.util import get_remote_address
 from typing import Dict, Any
 from ...db.supabase import get_supabase_client
 from datetime import datetime, timedelta, UTC
+from ...core.config import LEGAL_DISCLAIMER
 
 router = APIRouter()
 limiter = Limiter(key_func=get_remote_address)
@@ -45,12 +46,13 @@ async def get_status(request: Request):
         return {
             "status": {
                 "database": db_status,
-                "api": "healthy",
-                "data_delay_minutes": delay_minutes
+                "api": "healthy"
             },
+            "data_delay_minutes": delay_minutes,
             "last_update": latest_timestamp,
             "system_time": datetime.now(UTC).isoformat(),
-            "version": "1.0.0"
+            "version": "1.0.0",
+            "disclaimer": LEGAL_DISCLAIMER
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) 

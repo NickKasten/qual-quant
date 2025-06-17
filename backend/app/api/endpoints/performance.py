@@ -4,6 +4,7 @@ from slowapi.util import get_remote_address
 from typing import Dict, Any, List, Optional
 from ...db.supabase import get_supabase_client
 from datetime import datetime, timedelta, UTC
+from ...core.config import LEGAL_DISCLAIMER
 
 router = APIRouter()
 limiter = Limiter(key_func=get_remote_address)

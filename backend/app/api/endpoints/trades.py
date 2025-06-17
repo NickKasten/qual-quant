@@ -3,6 +3,7 @@ from slowapi import Limiter
 from slowapi.util import get_remote_address
 from typing import Dict, Any, List, Optional
 from ...db.supabase import get_supabase_client
+from ...core.config import LEGAL_DISCLAIMER
 
 router = APIRouter()
 limiter = Limiter(key_func=get_remote_address)
@@ -53,7 +54,8 @@ async def get_trades(
                 "total_count": total_count,
                 "total_pages": (total_count + page_size - 1) // page_size
             },
-            "data_delay_minutes": 15  # As per PRD requirement
+            "data_delay_minutes": 15,  # As per PRD requirement
+            "disclaimer": LEGAL_DISCLAIMER
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) 

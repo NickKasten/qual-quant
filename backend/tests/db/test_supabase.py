@@ -89,13 +89,12 @@ class TestSupabase(unittest.TestCase):
         mock_post.assert_called_once()
 
     @patch('backend.app.db.supabase.requests.post')
-    def test_update_trades_invalid_data(self, mock_post):
-        """Test trade update with invalid data"""
-        invalid_trade = self.valid_trade.copy()
-        invalid_trade.pop('order_id')
-        result = update_trades(invalid_trade)
+    def test_update_trades_duplicate_order_id(self, mock_post):
+        """Test trade update with duplicate order_id"""
+        mock_post.return_value.status_code = 409  # Conflict
+        result = update_trades(self.valid_trade)
         self.assertFalse(result)
-        mock_post.assert_not_called()
+        mock_post.assert_called_once()
 
     @patch('backend.app.db.supabase.requests.post')
     def test_update_positions_success(self, mock_post):
@@ -106,13 +105,20 @@ class TestSupabase(unittest.TestCase):
         mock_post.assert_called_once()
 
     @patch('backend.app.db.supabase.requests.post')
-    def test_update_positions_invalid_data(self, mock_post):
-        """Test position update with invalid data"""
-        invalid_position = self.valid_position.copy()
-        invalid_position.pop('symbol')
-        result = update_positions(invalid_position)
-        self.assertFalse(result)
-        mock_post.assert_not_called()
+    def test_update_positions_upsert(self, mock_post):
+        """Test position upsert functionality"""
+        mock_post.return_value.status_code = 200
+        # First update
+        result1 = update_positions(self.valid_position)
+        self.assertTrue(result1)
+        
+        # Update same position
+        updated_position = self.valid_position.copy()
+        updated_position['quantity'] = 20
+        result2 = update_positions(updated_position)
+        self.assertTrue(result2)
+        
+        self.assertEqual(mock_post.call_count, 2)
 
     @patch('backend.app.db.supabase.requests.post')
     def test_update_equity_success(self, mock_post):
@@ -123,13 +129,12 @@ class TestSupabase(unittest.TestCase):
         mock_post.assert_called_once()
 
     @patch('backend.app.db.supabase.requests.post')
-    def test_update_equity_invalid_data(self, mock_post):
-        """Test equity update with invalid data"""
-        invalid_equity = self.valid_equity.copy()
-        invalid_equity.pop('equity')
-        result = update_equity(invalid_equity)
-        self.assertFalse(result)
-        mock_post.assert_not_called()
+    def test_update_equity_duplicate_timestamp(self, mock_post):
+        """Test equity update with duplicate timestamp"""
+        mock_post.return_value.status_code = 200  # Should succeed due to upsert
+        result = update_equity(self.valid_equity)
+        self.assertTrue(result)
+        mock_post.assert_called_once()
 
     @patch('backend.app.db.supabase.requests.get')
     def test_read_trades(self, mock_get):

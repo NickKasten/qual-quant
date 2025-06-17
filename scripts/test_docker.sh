@@ -34,23 +34,25 @@ logger.info('Test log message')
 
 echo "Testing external service connections..."
 docker compose run --rm trading-bot python -c "
-from data.fetcher import fetch_ohlcv
-from broker.paper import PaperBroker
-from db.supabase import SupabaseDB
+import sys
+sys.path.append('/app')
+from backend.app.services.fetcher import fetch_ohlcv
+from backend.app.services.broker.paper import execute_trade
+from backend.app.db.supabase import get_supabase_client
 
 # Test data fetching
 print('Testing data fetching...')
-data = fetch_ohlcv('AAPL', '1d', '1y')
+data = fetch_ohlcv('AAPL')
 print(f'Successfully fetched data for AAPL: {len(data)} rows')
 
 # Test broker connection
 print('Testing broker connection...')
-broker = PaperBroker()
-print('Successfully initialized broker')
+trade = execute_trade(10, symbol='AAPL', side='buy', simulate=True)
+print('Successfully executed simulated trade')
 
 # Test database connection
 print('Testing database connection...')
-db = SupabaseDB()
+db = get_supabase_client()
 print('Successfully initialized database connection')
 "
 

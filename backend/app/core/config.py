@@ -14,6 +14,12 @@ REQUIRED_ENV_VARS = [
 
 TEST_MODE = os.getenv("TEST_MODE", "false").lower() == "true"
 
+LEGAL_DISCLAIMER = (
+    "This service is for informational and educational purposes only. "
+    "Nothing herein should be construed as financial advice, a solicitation, or a recommendation to buy or sell any security. "
+    "Trading involves risk and you may lose money. Please consult a qualified financial advisor before making investment decisions."
+)
+
 def load_config():
     if not TEST_MODE:
         missing = [var for var in REQUIRED_ENV_VARS if not os.getenv(var)]
