@@ -50,25 +50,3 @@ def verify_api_key(credentials: HTTPAuthorizationCredentials = Security(security
     
     return True
 
-def verify_api_key_optional(credentials: Optional[HTTPAuthorizationCredentials] = Security(security, auto_error=False)) -> bool:
-    """
-    Optional API key verification for endpoints that can work with or without auth.
-    
-    Args:
-        credentials: Optional HTTP Bearer token credentials
-        
-    Returns:
-        bool: True if valid API key provided or no API key configured, False if invalid
-    """
-    expected_api_key = get_api_key_from_env()
-    
-    # If no API key is configured, allow access
-    if not expected_api_key:
-        return True
-    
-    # If no credentials provided but API key is configured, deny access
-    if not credentials or not credentials.credentials:
-        return False
-    
-    # Verify the provided API key
-    return credentials.credentials == expected_api_key

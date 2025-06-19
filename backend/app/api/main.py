@@ -7,7 +7,7 @@ from slowapi.errors import RateLimitExceeded
 import time
 import os
 from typing import Dict, Any
-from backend.app.utils.auth import verify_api_key, verify_api_key_optional
+from backend.app.utils.auth import verify_api_key
 
 # Initialize FastAPI app
 app = FastAPI(
