@@ -14,8 +14,10 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy application code
 COPY . .
 
-# Create non-root user before copying start.sh
-RUN useradd -m appuser && chown -R appuser:appuser /app
+# Create logs directory and non-root user
+RUN mkdir -p /app/logs /app/backend/logs && \
+    useradd -m appuser && \
+    chown -R appuser:appuser /app
 
 # Copy start.sh and set permissions
 COPY start.sh /app/start.sh

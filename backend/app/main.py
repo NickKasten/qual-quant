@@ -12,15 +12,27 @@ from backend.app.core.config import load_config
 from backend.app.utils.helpers import log_function_call, exponential_backoff
 from backend.app.db.init_db import init_database
 
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    handlers=[
-        logging.StreamHandler(),
-        logging.FileHandler(Path(__file__).parent.parent / 'logs' / 'trading.log')
-    ]
-)
+# Configure logging with proper error handling
+def setup_logging():
+    log_dir = Path(__file__).parent.parent / 'logs'
+    log_dir.mkdir(exist_ok=True)  # Create logs directory if it doesn't exist
+    
+    handlers = [logging.StreamHandler()]
+    
+    # Only add file handler if we can write to the logs directory
+    try:
+        log_file = log_dir / 'trading.log'
+        handlers.append(logging.FileHandler(log_file))
+    except (OSError, PermissionError) as e:
+        print(f"Warning: Could not create log file: {e}")
+    
+    logging.basicConfig(
+        level=logging.INFO,
+        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+        handlers=handlers
+    )
+
+setup_logging()
 logger = logging.getLogger(__name__)
 
 def setup_application():
