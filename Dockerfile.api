@@ -1,0 +1,29 @@
+FROM python:3.11-slim
+
+WORKDIR /app
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    gcc \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy requirements first to leverage Docker cache
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy application code
+COPY . .
+
+# Create logs directory and non-root user
+RUN mkdir -p /app/logs /app/backend/logs && \
+    useradd -m appuser && \
+    chown -R appuser:appuser /app
+
+USER appuser
+
+# Set environment for API mode
+ENV RUN_MODE=api
+ENV PORT=8000
+
+# Direct command to run API server
+CMD ["python", "-m", "backend.app.api_server"]

@@ -3,11 +3,9 @@ services:
     name: vibe-trading-api
     env: docker
     plan: starter
-    dockerfilePath: ./Dockerfile
+    dockerfilePath: ./Dockerfile.api
     dockerContext: .
     branch: main
-    buildCommand: ""
-    startCommand: "/app/start.sh"
     envVars:
       - key: TIINGO_API_KEY
         sync: false
