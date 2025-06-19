@@ -36,6 +36,7 @@ import uvicorn
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from backend.app.main import run_trading_cycle, setup_application
+from backend.app.utils.helpers import is_market_open, get_time_until_market_open
 
 logger = logging.getLogger(__name__)
 
@@ -89,8 +90,30 @@ class BackgroundBot:
         # Main trading loop
         while self.running:
             try:
-                logger.info("Running trading cycle...")
-                print("Running trading cycle...")
+                # Check if market is open
+                if not is_market_open():
+                    time_until_open = get_time_until_market_open()
+                    hours_until_open = time_until_open // 3600
+                    minutes_until_open = (time_until_open % 3600) // 60
+                    
+                    logger.info(f"Market is closed. Next open in {hours_until_open}h {minutes_until_open}m")
+                    print(f"Market is closed. Next open in {hours_until_open}h {minutes_until_open}m")
+                    
+                    # Sleep for 30 minutes when market is closed (to avoid frequent checks)
+                    sleep_time = min(1800, time_until_open)  # 30 minutes or time until open, whichever is shorter
+                    logger.info(f"Sleeping for {sleep_time // 60} minutes while market is closed")
+                    print(f"Sleeping for {sleep_time // 60} minutes while market is closed")
+                    
+                    # Sleep with interruption check
+                    for _ in range(sleep_time):
+                        if not self.running:
+                            break
+                        time.sleep(1)
+                    continue
+                
+                # Market is open - run trading cycle
+                logger.info("Market is open - running trading cycle...")
+                print("Market is open - running trading cycle...")
                 run_trading_cycle("AAPL")  # Default symbol
                 logger.info(f"Trading cycle completed, sleeping for {self.interval_seconds}s")
                 print(f"Trading cycle completed, sleeping for {self.interval_seconds}s")
