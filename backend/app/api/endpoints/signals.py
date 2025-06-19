@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, HTTPException, Request, Depends
 from slowapi import Limiter
 from slowapi.util import get_remote_address
 from typing import Dict, Any
@@ -6,13 +6,14 @@ from ...db.supabase import get_supabase_client
 from bot.strategy.signals import generate_signals
 from ...services.fetcher import fetch_ohlcv
 from ...core.config import LEGAL_DISCLAIMER
+from ...utils.auth import verify_api_key
 
 router = APIRouter()
 limiter = Limiter(key_func=get_remote_address)
 
 @router.get("/signals")
 @limiter.limit("30/minute")
-async def get_signals(request: Request):
+async def get_signals(request: Request, authenticated: bool = Depends(verify_api_key)):
     """
     Get current trading signals for all tracked symbols.
     """

@@ -1,9 +1,10 @@
-from fastapi import APIRouter, HTTPException, Query, Request
+from fastapi import APIRouter, HTTPException, Query, Request, Depends
 from slowapi import Limiter
 from slowapi.util import get_remote_address
 from typing import Dict, Any, List, Optional
 from ...db.supabase import get_supabase_client
 from ...core.config import LEGAL_DISCLAIMER
+from ...utils.auth import verify_api_key
 
 router = APIRouter()
 limiter = Limiter(key_func=get_remote_address)
@@ -14,7 +15,8 @@ async def get_trades(
     request: Request,
     page: int = Query(1, ge=1, description="Page number"),
     page_size: int = Query(20, ge=1, le=100, description="Number of items per page"),
-    symbol: Optional[str] = Query(None, description="Filter by symbol")
+    symbol: Optional[str] = Query(None, description="Filter by symbol"),
+    authenticated: bool = Depends(verify_api_key)
 ):
     """
     Get trade history with pagination and optional symbol filter.

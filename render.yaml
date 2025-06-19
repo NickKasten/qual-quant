@@ -29,3 +29,5 @@ services:
         value: "8000"
       - key: RUN_MODE
         value: "api"
+      - key: API_KEY
+        sync: false

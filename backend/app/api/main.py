@@ -1,16 +1,18 @@
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, HTTPException, Request, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 import time
+import os
 from typing import Dict, Any
+from backend.app.utils.auth import verify_api_key, verify_api_key_optional
 
 # Initialize FastAPI app
 app = FastAPI(
     title="Trading Bot API",
-    description="API for accessing trading bot portfolio, trades, and performance data",
+    description="API for accessing trading bot portfolio, trades, and performance data. Protected endpoints require API key authentication via Bearer token.",
     version="1.0.0"
 )
 

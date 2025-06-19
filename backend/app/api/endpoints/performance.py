@@ -1,17 +1,18 @@
-from fastapi import APIRouter, HTTPException, Query, Request
+from fastapi import APIRouter, HTTPException, Query, Request, Depends
 from slowapi import Limiter
 from slowapi.util import get_remote_address
 from typing import Dict, Any, List, Optional
 from ...db.supabase import get_supabase_client
 from datetime import datetime, timedelta, UTC
 from ...core.config import LEGAL_DISCLAIMER
+from ...utils.auth import verify_api_key
 
 router = APIRouter()
 limiter = Limiter(key_func=get_remote_address)
 
 @router.get("/performance")
 @limiter.limit("30/minute")
-async def get_performance(request: Request, days: int = Query(30, ge=1, le=365, description="Number of days of performance data to return")):
+async def get_performance(request: Request, days: int = Query(30, ge=1, le=365, description="Number of days of performance data to return"), authenticated: bool = Depends(verify_api_key)):
     """
     Get equity curve data for performance analysis.
     """

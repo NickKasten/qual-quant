@@ -1,17 +1,18 @@
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, HTTPException, Request, Depends
 from slowapi import Limiter
 from slowapi.util import get_remote_address
 from typing import Dict, Any
 from ...db.supabase import get_supabase_client
 from datetime import datetime, timedelta, UTC
 from ...core.config import LEGAL_DISCLAIMER
+from ...utils.auth import verify_api_key
 
 router = APIRouter()
 limiter = Limiter(key_func=get_remote_address)
 
 @router.get("/status")
 @limiter.limit("30/minute")
-async def get_status(request: Request):
+async def get_status(request: Request, authenticated: bool = Depends(verify_api_key)):
     """
     Get system status and data delay information.
     """

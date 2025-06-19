@@ -4,13 +4,14 @@ from slowapi.util import get_remote_address
 from typing import Dict, Any
 from ...db.supabase import get_supabase_client
 from ...core.config import load_config, LEGAL_DISCLAIMER
+from ...utils.auth import verify_api_key
 
 router = APIRouter()
 limiter = Limiter(key_func=get_remote_address)
 
 @router.get("/portfolio")
 @limiter.limit("30/minute")
-async def get_portfolio(request: Request):
+async def get_portfolio(request: Request, authenticated: bool = Depends(verify_api_key)):
     """
     Get current portfolio state including positions, equity, and P/L.
     """
