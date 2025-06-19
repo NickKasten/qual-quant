@@ -5,21 +5,23 @@
 An end-to-end, **transparent sandbox** where an AI trading bot generates simulated trades (via Alpaca paper trading) and broadcasts its portfolio, trade log, and performance through a public web dashboard. The bot implements a simple but effective trading strategy using SMA/RSI crossovers with strict risk management. This project is designed to be educational and transparent, not advisory.
 
 ## Project Status
-- ✅ Backend trading bot (Step 1 Complete)
+- ✅ Backend trading bot (Complete)
 - ✅ Database setup (Complete)
+- ✅ REST API with authentication (Complete)
+- ✅ Market hours detection (Complete)
 - 🚧 Frontend dashboard (Planned)
-- 🚧 Edge API (Planned)
 
 ## Core Features
 - 🤖 AI-powered trading bot using 20/50-day SMA crossover + RSI (70/30) strategy
+- 🔐 Secure REST API with Bearer token authentication
+- 🕐 Market hours detection (Mon-Fri 9:30AM-4:00PM ET) to avoid unnecessary API calls
 - 📊 Live dashboard with portfolio tracking and equity curve (Coming Soon)
 - 📈 Performance visualization vs. S&P 500 (delayed) (Coming Soon)
 - 📝 Real-time trade feed with detailed order information (Coming Soon)
 - ⚡ 15-minute delayed market data from Tiingo/Alpha Vantage
 - 🔒 Paper trading only - no real capital at risk
 - 📊 Comprehensive backtesting and performance metrics
-- 🔄 Automated trading cycle every 5 minutes (via cron job or Docker)
-- 🎯 Edge API for fast, global dashboard access (Coming Soon)
+- 🔄 Automated trading cycle every 5 minutes during market hours
 - 📱 Responsive design with WCAG 2.1 AA compliance (Coming Soon)
 
 ## System Architecture
@@ -27,16 +29,23 @@ An end-to-end, **transparent sandbox** where an AI trading bot generates simulat
 ```mermaid
 graph TD
     subgraph Backend [Complete]
-        A[AI Trading Bot (Docker + Python)] -- writes --> B[Supabase /Postgres]
-        C[Market-Data Fetcher] -- writes --> B
+        A[AI Trading Bot + API Server] -- writes --> B[Supabase/Postgres]
+        C[Market Data Fetcher] -- writes --> B
+        A -- checks --> H[Market Hours Detection]
     end
-    subgraph API Edge [Planned]
-        D[Read-Only JSON Endpoints] -- fetch --> B
+    subgraph API [Complete]
+        D[Authenticated REST API] -- reads --> B
+        D -- protected by --> I[Bearer Token Auth]
     end
     subgraph Frontend [Planned]
-        E[Next.js Site (Vercel)] -- request --> D
+        E[Next.js Dashboard] -- requests --> D
     end
-    F(User Browser) -- HTTPS --> E
+    subgraph Deployment [Complete]
+        F[Render.com] -- hosts --> A
+        F -- hosts --> D
+    end
+    G[Users/Clients] -- HTTPS + API Key --> D
+    G -- HTTPS --> E
 ```
 
 ## Setup Instructions
@@ -61,6 +70,9 @@ ALPHA_VANTAGE_API_KEY=your_alpha_vantage_key
 # Database
 SUPABASE_URL=your_supabase_url
 SUPABASE_KEY=your_supabase_key
+
+# API Security
+API_KEY=your_secure_api_key_for_endpoints
 
 # Trading Parameters
 MAX_POSITIONS=3
@@ -129,24 +141,39 @@ SUPABASE_URL=your_supabase_url SUPABASE_KEY=your_supabase_key pytest backend/tes
 
 ## Technical Stack
 - Backend: Python (FastAPI, modular, see backend/app/ and bot/)
-- Frontend: Next.js (Vercel) [Planned]
+- API: FastAPI with Bearer token authentication (Complete)
+- Frontend: Next.js (Planned)
 - Database: Supabase/Postgres
-- API: Edge Functions (FastAPI) [Planned]
 - Data Sources: Tiingo (primary), Alpha Vantage (backup)
-- Deployment: Vercel (Frontend + API) [Planned], Docker (Backend)
+- Deployment: Render.com (API + Bot), Docker containers
+- Security: API key authentication, rate limiting, market hours detection
 
 ## API Endpoints
 
-The backend provides a RESTful API for accessing trading data. All endpoints include rate limiting (30 requests/minute) and legal disclaimers.
+The backend provides a secure RESTful API for accessing trading data. Protected endpoints require API key authentication via Bearer token. All endpoints include rate limiting (30 requests/minute) and legal disclaimers.
 
 ### Base URL
-- **Production**: `https://your-app.onrender.com`
+- **Production**: `https://vibe-trading.onrender.com`
 - **Local Development**: `http://localhost:8000`
 
-### System Health Endpoints
+### Authentication
 
-#### `GET /health`
-Basic health check for the API server.
+Protected endpoints require API key authentication using Bearer tokens:
+
+```bash
+# Include API key in Authorization header
+curl -H "Authorization: Bearer YOUR_API_KEY" \
+     https://vibe-trading.onrender.com/api/portfolio
+```
+
+**Authentication Responses:**
+- `401`: Missing or invalid API key
+- `429`: Rate limit exceeded
+
+### System Health Endpoints (Public)
+
+#### `GET /health` 🔓
+Basic health check for the API server (no authentication required).
 
 **Response:**
 ```json
@@ -156,7 +183,21 @@ Basic health check for the API server.
 }
 ```
 
-#### `GET /api/status`
+#### `GET /` 🔓
+Root endpoint returning basic API information (no authentication required).
+
+**Response:**
+```json
+{
+  "message": "Trading Bot API",
+  "version": "1.0.0", 
+  "status": "running"
+}
+```
+
+### Protected Endpoints (Require API Key)
+
+#### `GET /api/status` 🔐
 Detailed system status including database health and data freshness.
 
 **Response:**
@@ -174,9 +215,7 @@ Detailed system status including database health and data freshness.
 }
 ```
 
-### Trading Data Endpoints
-
-#### `GET /api/portfolio`
+#### `GET /api/portfolio` 🔐
 Current portfolio state including positions, equity, and P&L.
 
 **Response:**
@@ -200,7 +239,7 @@ Current portfolio state including positions, equity, and P&L.
 }
 ```
 
-#### `GET /api/trades`
+#### `GET /api/trades` 🔐
 Trade history with pagination support.
 
 **Query Parameters:**
@@ -238,7 +277,7 @@ Trade history with pagination support.
 }
 ```
 
-#### `GET /api/performance`
+#### `GET /api/performance` 🔐
 Equity curve data and performance metrics.
 
 **Query Parameters:**
@@ -267,7 +306,7 @@ Equity curve data and performance metrics.
 }
 ```
 
-#### `GET /api/signals`
+#### `GET /api/signals` 🔐
 Latest trading signals and technical indicators.
 
 **Response:**
@@ -293,6 +332,8 @@ Latest trading signals and technical indicators.
 
 ### API Features
 
+- **Authentication**: Bearer token API key authentication for protected endpoints
+- **Market Hours**: Bot only trades during market hours (Mon-Fri 9:30AM-4:00PM ET)
 - **Rate Limiting**: 30 requests per minute per IP address
 - **CORS**: Enabled for all origins (configure for production)
 - **Error Handling**: Consistent JSON error responses
@@ -315,6 +356,7 @@ All endpoints return consistent error responses:
 Common HTTP status codes:
 - `200`: Success
 - `400`: Bad Request (invalid parameters)
+- `401`: Unauthorized (missing or invalid API key)
 - `429`: Too Many Requests (rate limit exceeded)
 - `500`: Internal Server Error
 
