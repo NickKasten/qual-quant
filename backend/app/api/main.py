@@ -36,6 +36,11 @@ async def global_exception_handler(request, exc):
         content={"detail": "Internal server error", "timestamp": time.time()}
     )
 
+# Root endpoint
+@app.get("/")
+async def root():
+    return {"message": "Trading Bot API", "version": "1.0.0", "status": "running"}
+
 # Health check endpoint
 @app.get("/health")
 @limiter.limit("5/minute")

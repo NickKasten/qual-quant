@@ -110,11 +110,25 @@ async def lifespan(app: FastAPI):
     print("API server shutting down, stopping background bot...")
     background_bot.stop()
 
-# Import the base app and patch it with lifespan
-from backend.app.api.main import app
+# Create new app with lifespan instead of importing existing one
+from fastapi import FastAPI
+from backend.app.api.main import app as base_app
 
-# Replace the app's lifespan with our version
-app.router.lifespan_context = lifespan
+# Create new app with our lifespan
+app = FastAPI(
+    title="Trading Bot API",
+    description="API for accessing trading bot portfolio, trades, and performance data",
+    version="1.0.0",
+    lifespan=lifespan
+)
+
+# Copy all routes from the base app
+for route in base_app.routes:
+    app.router.routes.append(route)
+
+# Copy middleware
+app.middleware_stack = base_app.middleware_stack
+app.state = base_app.state
 
 def main():
     """Run the combined API server + background bot."""
