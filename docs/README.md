@@ -135,6 +135,189 @@ SUPABASE_URL=your_supabase_url SUPABASE_KEY=your_supabase_key pytest backend/tes
 - Data Sources: Tiingo (primary), Alpha Vantage (backup)
 - Deployment: Vercel (Frontend + API) [Planned], Docker (Backend)
 
+## API Endpoints
+
+The backend provides a RESTful API for accessing trading data. All endpoints include rate limiting (30 requests/minute) and legal disclaimers.
+
+### Base URL
+- **Production**: `https://your-app.onrender.com`
+- **Local Development**: `http://localhost:8000`
+
+### System Health Endpoints
+
+#### `GET /health`
+Basic health check for the API server.
+
+**Response:**
+```json
+{
+  "status": "healthy",
+  "timestamp": 1671234567.89
+}
+```
+
+#### `GET /api/status`
+Detailed system status including database health and data freshness.
+
+**Response:**
+```json
+{
+  "status": {
+    "database": "healthy",
+    "api": "healthy"
+  },
+  "data_delay_minutes": 5,
+  "last_update": "2025-06-19T02:45:00Z",
+  "system_time": "2025-06-19T02:50:00Z",
+  "version": "1.0.0",
+  "disclaimer": "This service is for informational and educational purposes only..."
+}
+```
+
+### Trading Data Endpoints
+
+#### `GET /api/portfolio`
+Current portfolio state including positions, equity, and P&L.
+
+**Response:**
+```json
+{
+  "positions": [
+    {
+      "symbol": "AAPL",
+      "quantity": 10,
+      "average_entry_price": 150.00,
+      "current_price": 155.00,
+      "unrealized_pnl": 50.00,
+      "timestamp": "2025-06-19T02:45:00Z"
+    }
+  ],
+  "current_equity": 100500.00,
+  "total_pl": 50.00,
+  "timestamp": "2025-06-19T02:45:00Z",
+  "data_delay_minutes": 15,
+  "disclaimer": "..."
+}
+```
+
+#### `GET /api/trades`
+Trade history with pagination support.
+
+**Query Parameters:**
+- `page` (int, default: 1): Page number for pagination
+- `page_size` (int, default: 20, max: 100): Number of trades per page
+- `symbol` (string, optional): Filter trades by symbol (e.g., "AAPL")
+
+**Example:** `GET /api/trades?page=1&page_size=20&symbol=AAPL`
+
+**Response:**
+```json
+{
+  "trades": [
+    {
+      "id": 123,
+      "order_id": "abc-123-def",
+      "symbol": "AAPL",
+      "side": "buy",
+      "quantity": 10,
+      "price": 150.00,
+      "timestamp": "2025-06-19T02:45:00Z",
+      "strategy": "SMA_RSI",
+      "profit_loss": null,
+      "status": "completed"
+    }
+  ],
+  "pagination": {
+    "page": 1,
+    "page_size": 20,
+    "total_count": 45,
+    "total_pages": 3
+  },
+  "data_delay_minutes": 15,
+  "disclaimer": "..."
+}
+```
+
+#### `GET /api/performance`
+Equity curve data and performance metrics.
+
+**Query Parameters:**
+- `days` (int, default: 30, range: 1-365): Number of days of historical data
+
+**Example:** `GET /api/performance?days=30`
+
+**Response:**
+```json
+{
+  "equity_curve": [
+    {
+      "timestamp": "2025-06-19T02:45:00Z",
+      "equity": 100000.00,
+      "cash": 95000.00,
+      "total_value": 100500.00
+    }
+  ],
+  "metrics": {
+    "initial_equity": 100000.00,
+    "final_equity": 100500.00,
+    "total_return_percent": 0.5,
+    "period_days": 30
+  },
+  "data_delay_minutes": 15
+}
+```
+
+#### `GET /api/signals`
+Latest trading signals and technical indicators.
+
+**Response:**
+```json
+{
+  "signals": {
+    "AAPL": {
+      "signal": 1,
+      "side": "buy",
+      "data": {
+        "SMA20": 148.50,
+        "SMA50": 145.20,
+        "RSI": 65.4,
+        "close": 150.00
+      }
+    }
+  },
+  "timestamp": "2025-06-19T02:45:00Z",
+  "data_delay_minutes": 15,
+  "disclaimer": "..."
+}
+```
+
+### API Features
+
+- **Rate Limiting**: 30 requests per minute per IP address
+- **CORS**: Enabled for all origins (configure for production)
+- **Error Handling**: Consistent JSON error responses
+- **Data Delay**: All responses include `data_delay_minutes` field (≤15 minutes)
+- **Legal Compliance**: All responses include educational disclaimer
+- **Pagination**: Large datasets use cursor-based pagination
+- **Filtering**: Symbol-based filtering where applicable
+
+### Error Responses
+
+All endpoints return consistent error responses:
+
+```json
+{
+  "detail": "Error description",
+  "timestamp": 1671234567.89
+}
+```
+
+Common HTTP status codes:
+- `200`: Success
+- `400`: Bad Request (invalid parameters)
+- `429`: Too Many Requests (rate limit exceeded)
+- `500`: Internal Server Error
+
 ## Backend API & Data Model Updates
 - All API endpoints now include a `data_delay_minutes` field and a legal `disclaimer` in their JSON responses.
 - Backend endpoints are in `backend/app/api/endpoints/`.
