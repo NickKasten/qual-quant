@@ -51,12 +51,16 @@ class BackgroundBot:
         """Start the background bot in a separate thread."""
         if self.running:
             logger.warning("Bot is already running")
+            print("Bot is already running")
             return
             
         logger.info(f"Starting background bot with {self.interval_seconds}s interval")
+        print(f"Starting background bot with {self.interval_seconds}s interval")
         self.running = True
         self.thread = threading.Thread(target=self._run_loop, daemon=True)
         self.thread.start()
+        logger.info("Background bot thread started")
+        print("Background bot thread started")
         
     def stop(self):
         """Stop the background bot."""
@@ -67,22 +71,29 @@ class BackgroundBot:
             
     def _run_loop(self):
         """Main bot loop that runs in the background thread."""
-        logger.info("Background bot loop started")
+        logger.info("=== BACKGROUND BOT LOOP STARTED ===")
+        print("=== BACKGROUND BOT LOOP STARTED ===")
         
         # Initialize the application once
         try:
+            logger.info("Setting up bot application...")
+            print("Setting up bot application...")
             setup_application()
             logger.info("Bot application setup completed")
+            print("Bot application setup completed")
         except Exception as e:
-            logger.error(f"Bot setup failed: {e}")
+            logger.error(f"Bot setup failed: {e}", exc_info=True)
+            print(f"Bot setup failed: {e}")
             return
             
         # Main trading loop
         while self.running:
             try:
                 logger.info("Running trading cycle...")
+                print("Running trading cycle...")
                 run_trading_cycle("AAPL")  # Default symbol
                 logger.info(f"Trading cycle completed, sleeping for {self.interval_seconds}s")
+                print(f"Trading cycle completed, sleeping for {self.interval_seconds}s")
                 
                 # Sleep with interruption check
                 for _ in range(self.interval_seconds):
@@ -92,6 +103,7 @@ class BackgroundBot:
                     
             except Exception as e:
                 logger.error(f"Error in bot loop: {e}", exc_info=True)
+                print(f"Error in bot loop: {e}")
                 time.sleep(60)  # Wait 1 minute before retrying on error
 
 # Global bot instance
@@ -110,25 +122,38 @@ async def lifespan(app: FastAPI):
     print("API server shutting down, stopping background bot...")
     background_bot.stop()
 
-# Create new app with lifespan instead of importing existing one
-from fastapi import FastAPI
-from backend.app.api.main import app as base_app
+# Import base app and modify it to use our lifespan
+from backend.app.api.main import app
 
-# Create new app with our lifespan
-app = FastAPI(
-    title="Trading Bot API",
-    description="API for accessing trading bot portfolio, trades, and performance data",
-    version="1.0.0",
-    lifespan=lifespan
-)
+# Add startup event to ensure bot starts
+@app.on_event("startup")
+async def startup_event():
+    """Start the background bot when the API starts."""
+    try:
+        logger.info("=== STARTUP EVENT TRIGGERED ===")
+        print("=== STARTUP EVENT TRIGGERED ===")
+        logger.info("API server starting, launching background bot...")
+        print("API server starting, launching background bot...")
+        background_bot.start()
+        logger.info("=== BACKGROUND BOT START CALLED ===")
+        print("=== BACKGROUND BOT START CALLED ===")
+    except Exception as e:
+        logger.error(f"Error in startup event: {e}", exc_info=True)
+        print(f"Error in startup event: {e}")
+        raise
 
-# Copy all routes from the base app
-for route in base_app.routes:
-    app.router.routes.append(route)
-
-# Copy middleware
-app.middleware_stack = base_app.middleware_stack
-app.state = base_app.state
+@app.on_event("shutdown") 
+async def shutdown_event():
+    """Stop the background bot when the API shuts down."""
+    try:
+        logger.info("=== SHUTDOWN EVENT TRIGGERED ===")
+        print("=== SHUTDOWN EVENT TRIGGERED ===")
+        logger.info("API server shutting down, stopping background bot...")
+        print("API server shutting down, stopping background bot...")
+        background_bot.stop()
+    except Exception as e:
+        logger.error(f"Error in shutdown event: {e}", exc_info=True)
+        print(f"Error in shutdown event: {e}")
 
 def main():
     """Run the combined API server + background bot."""
