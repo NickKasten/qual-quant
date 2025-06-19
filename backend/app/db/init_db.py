@@ -73,7 +73,11 @@ def _init_equity(client, starting_equity: float) -> None:
                 cash=starting_equity,
                 total_value=starting_equity
             )
-            client.table('equity').insert(initial_equity.model_dump()).execute()
+            # Convert datetime to serializable format
+            data = initial_equity.model_dump(exclude={'id'})
+            if 'timestamp' in data and hasattr(data['timestamp'], 'isoformat'):
+                data['timestamp'] = data['timestamp'].isoformat()
+            client.table('equity').insert(data).execute()
             logger.info(f"Initialized equity with {starting_equity}")
     except Exception as e:
         logger.error(f"Failed to initialize equity: {e}")
