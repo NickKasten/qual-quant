@@ -29,7 +29,7 @@ async def get_status(request: Request):
         latest_data = (
             supabase.table("equity")
             .select("timestamp")
-            .order("timestamp", desc=True)
+            .order("timestamp.desc")
             .limit(1)
             .execute()
         )

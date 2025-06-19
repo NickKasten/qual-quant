@@ -26,7 +26,7 @@ async def get_performance(request: Request, days: int = Query(30, ge=1, le=365, 
             supabase.table("equity")
             .select("*")
             .gte("timestamp", start_date.isoformat())
-            .order("timestamp", asc=True)
+            .order("timestamp.asc")
             .execute()
         )
         

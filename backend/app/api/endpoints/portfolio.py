@@ -22,7 +22,7 @@ async def get_portfolio(request: Request):
         positions = positions_response.data if positions_response.data else []
         
         # Fetch current equity
-        equity_response = supabase.table("equity").select("*").order("timestamp", desc=True).limit(1).execute()
+        equity_response = supabase.table("equity").select("*").order("timestamp.desc").limit(1).execute()
         current_equity = equity_response.data[0] if equity_response.data else {"equity": 0, "timestamp": None}
         
         # Calculate total P/L

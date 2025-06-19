@@ -39,7 +39,7 @@ async def get_trades(
         # Get paginated results
         trades_response = (
             query
-            .order("timestamp", desc=True)
+            .order("timestamp.desc")
             .range(offset, offset + page_size - 1)
             .execute()
         )
