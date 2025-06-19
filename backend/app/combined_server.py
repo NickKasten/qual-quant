@@ -163,6 +163,11 @@ def main():
     logger.info(f"Starting combined API server + bot on {host}:{port}")
     print(f"Starting combined API server + bot on {host}:{port}")
     
+    # Start the background bot before starting the server
+    logger.info("=== MANUALLY STARTING BACKGROUND BOT ===")
+    print("=== MANUALLY STARTING BACKGROUND BOT ===")
+    background_bot.start()
+    
     # Test basic app functionality
     try:
         print("Testing app import...")
@@ -183,5 +188,7 @@ def main():
         log_level="info"
     )
 
-if __name__ == "__main__":
+# Always call main() when this module is imported or executed
+# This handles both direct execution and module execution (python -m)
+if __name__ == "__main__" or __name__ == "backend.app.combined_server":
     main()
