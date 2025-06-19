@@ -11,4 +11,11 @@ fi
 
 echo "All required environment variables are set"
 
-exec python -m backend.app.main 
+# Check if we should run API server or trading bot
+if [ "$RUN_MODE" = "api" ]; then
+    echo "Starting API server..."
+    exec python -m backend.app.api_server
+else
+    echo "Starting trading bot..."
+    exec python -m backend.app.main
+fi 

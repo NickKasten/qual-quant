@@ -1,0 +1,33 @@
+services:
+  - type: web
+    name: vibe-trading-api
+    env: docker
+    plan: starter
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    branch: main
+    buildCommand: ""
+    startCommand: "/app/start.sh"
+    envVars:
+      - key: TIINGO_API_KEY
+        sync: false
+      - key: ALPHA_VANTAGE_API_KEY
+        sync: false
+      - key: ALPACA_API_KEY
+        sync: false
+      - key: ALPACA_SECRET_KEY
+        sync: false
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_KEY
+        sync: false
+      - key: STARTING_EQUITY
+        value: "100000"
+      - key: MAX_POSITION_SIZE
+        value: "0.1"
+      - key: RISK_PER_TRADE
+        value: "0.02"
+      - key: PORT
+        value: "8000"
+      - key: RUN_MODE
+        value: "api"
