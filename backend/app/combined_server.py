@@ -33,7 +33,8 @@ def setup_logging():
 setup_logging()
 
 import uvicorn
-from backend.app.api.main import app
+from contextlib import asynccontextmanager
+from fastapi import FastAPI
 from backend.app.main import run_trading_cycle, setup_application
 
 logger = logging.getLogger(__name__)
@@ -96,17 +97,24 @@ class BackgroundBot:
 # Global bot instance
 background_bot = BackgroundBot()
 
-@app.on_event("startup")
-async def startup_event():
-    """Start the background bot when the API server starts."""
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Manage the lifecycle of the background bot."""
+    # Startup
     logger.info("API server starting, launching background bot...")
+    print("API server starting, launching background bot...")
     background_bot.start()
-
-@app.on_event("shutdown")
-async def shutdown_event():
-    """Stop the background bot when the API server shuts down."""
+    yield
+    # Shutdown
     logger.info("API server shutting down, stopping background bot...")
+    print("API server shutting down, stopping background bot...")
     background_bot.stop()
+
+# Import the base app and patch it with lifespan
+from backend.app.api.main import app
+
+# Replace the app's lifespan with our version
+app.router.lifespan_context = lifespan
 
 def main():
     """Run the combined API server + background bot."""
