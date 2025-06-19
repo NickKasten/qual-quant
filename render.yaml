@@ -3,7 +3,7 @@ services:
     name: vibe-trading-api
     env: docker
     plan: starter
-    dockerfilePath: ./Dockerfile.api
+    dockerfilePath: ./Dockerfile.combined
     dockerContext: .
     branch: main
     envVars:
