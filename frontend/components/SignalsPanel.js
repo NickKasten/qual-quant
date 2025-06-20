@@ -184,7 +184,7 @@ export default function SignalsPanel() {
           <h4 className="text-sm font-medium text-blue-900 mb-2">Strategy Information</h4>
           <p className="text-sm text-blue-800">
             Signals are generated using a 20/50-day SMA crossover strategy with RSI filter. 
-            BUY signals require SMA20 > SMA50 and RSI < 70. SELL signals require SMA20 < SMA50 and RSI > 30.
+            BUY signals require SMA20 &gt; SMA50 and RSI &lt; 70. SELL signals require SMA20 &lt; SMA50 and RSI &gt; 30.
           </p>
         </div>
 
