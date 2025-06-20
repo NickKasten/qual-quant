@@ -21,11 +21,23 @@ class ApiClient {
       const response = await fetch(url, config);
       
       if (!response.ok) {
+        if (response.status === 404) {
+          throw new Error(`API endpoint not found: ${endpoint}`);
+        }
+        if (response.status === 401) {
+          throw new Error('Authentication failed - check API key');
+        }
+        if (response.status >= 500) {
+          throw new Error('Backend server error - please try again later');
+        }
         throw new Error(`HTTP error! status: ${response.status}`);
       }
       
       return await response.json();
     } catch (error) {
+      if (error.name === 'TypeError' && error.message.includes('fetch')) {
+        throw new Error('Cannot connect to backend - check if API server is running');
+      }
       console.error(`API request failed: ${endpoint}`, error);
       throw error;
     }
