@@ -52,8 +52,7 @@ class RateLimitError(Exception):
 @tenacity.retry(
     stop=tenacity.stop_after_attempt(3),
     wait=tenacity.wait_exponential(multiplier=1, min=2, max=10),
-    retry=tenacity.retry_if_exception_type((requests.RequestException, Exception)),
-    retry=tenacity.retry_if_not_exception_type(RateLimitError),
+    retry=tenacity.retry_if_exception_type((requests.RequestException, Exception)) & tenacity.retry_if_not_exception_type(RateLimitError),
     reraise=True,
     before_sleep=tenacity.before_sleep_log(logger, logging.WARNING)
 )
