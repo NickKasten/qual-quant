@@ -22,7 +22,7 @@ async def get_status(request: Request, authenticated: bool = Depends(verify_api_
         # Check database connection
         db_status = "healthy"
         try:
-            supabase.table("equity").select("count").limit(1).execute()
+            supabase.table("equity").select("id").limit(1).execute()
         except Exception:
             db_status = "unhealthy"
         

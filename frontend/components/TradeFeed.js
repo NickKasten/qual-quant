@@ -32,14 +32,31 @@ export default function TradeFeed() {
   };
 
   const formatCurrency = (value) => {
+    if (value === null || value === undefined || isNaN(value)) {
+      return '$---.--';
+    }
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
       currency: 'USD'
-    }).format(value || 0);
+    }).format(value);
   };
 
   const formatDateTime = (timestamp) => {
-    return new Date(timestamp).toLocaleString();
+    if (!timestamp) {
+      return 'Unknown time';
+    }
+    try {
+      return new Date(timestamp).toLocaleString();
+    } catch (error) {
+      return 'Invalid date';
+    }
+  };
+
+  const safeNumber = (value) => {
+    if (value === null || value === undefined || isNaN(value)) {
+      return 0;
+    }
+    return Number(value);
   };
 
   const getSideColor = (side) => {
@@ -106,21 +123,70 @@ export default function TradeFeed() {
           </div>
           
           <div className="text-center py-12">
-            <div className="flex justify-center mb-4">
-              <svg className="w-12 h-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-              </svg>
+            <div className="flex justify-center mb-6">
+              <div className="relative">
+                <svg className="w-16 h-16 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                </svg>
+                <div className="absolute -top-2 -right-2 w-8 h-8 bg-red-100 rounded-full flex items-center justify-center">
+                  <span className="text-sm">😵</span>
+                </div>
+              </div>
             </div>
-            <h4 className="text-lg font-medium text-gray-900 mb-2">Trade History Unavailable</h4>
-            <p className="text-gray-500 mb-4">Unable to load trading activity</p>
-            <div className="text-sm text-red-600 bg-red-50 px-3 py-2 rounded-md inline-block">
-              {error}
+            <h4 className="text-xl font-medium text-gray-900 mb-3">
+              🚫 Houston, We Have a Problem!
+            </h4>
+            <p className="text-gray-600 mb-6 max-w-md mx-auto">
+              Our trading history seems to have gone on vacation without telling us. 
+              Don't worry though - it's probably just taking a coffee break! ☕
+            </p>
+            <div className="text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg px-4 py-3 inline-block max-w-lg">
+              <div className="flex items-center">
+                <svg className="w-4 h-4 mr-2 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                </svg>
+                <span className="font-medium">Error Details:</span>
+              </div>
+              <p className="mt-1 text-xs">{error}</p>
             </div>
           </div>
 
-          <div className="mt-8 bg-gray-50 rounded-lg p-4">
-            <div className="text-center text-gray-500">
-              <p className="text-sm">Trade history will appear here when connected to the backend</p>
+          <div className="mt-8 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-6">
+            <div className="text-center">
+              <h5 className="text-lg font-medium text-indigo-900 mb-2">
+                🎭 Preview Mode Activated!
+              </h5>
+              <p className="text-sm text-indigo-800 mb-4">
+                Here's what your trade history will look like once everything is connected:
+              </p>
+              <div className="bg-white rounded-lg shadow-sm border border-indigo-200 p-4">
+                <div className="grid grid-cols-6 gap-4 text-xs text-gray-500 mb-3 border-b pb-2">
+                  <div>Timestamp</div>
+                  <div>Symbol</div>
+                  <div>Side</div>
+                  <div>Quantity</div>
+                  <div>Price</div>
+                  <div>Total</div>
+                </div>
+                <div className="space-y-2 text-sm text-gray-400">
+                  <div className="grid grid-cols-6 gap-4 py-2 bg-gray-50 rounded">
+                    <div>2024-06-20 10:30</div>
+                    <div>AAPL</div>
+                    <div><span className="bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs">BUY</span></div>
+                    <div>10</div>
+                    <div>$195.50</div>
+                    <div>$1,955.00</div>
+                  </div>
+                  <div className="grid grid-cols-6 gap-4 py-2 bg-gray-50 rounded">
+                    <div>2024-06-20 11:15</div>
+                    <div>TSLA</div>
+                    <div><span className="bg-red-100 text-red-800 px-2 py-1 rounded-full text-xs">SELL</span></div>
+                    <div>5</div>
+                    <div>$180.25</div>
+                    <div>$901.25</div>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -180,21 +246,21 @@ export default function TradeFeed() {
                         {formatDateTime(trade.timestamp)}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                        {trade.symbol}
+                        {trade.symbol || 'N/A'}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span className={getSideBadge(trade.side)}>
-                          {trade.side?.toUpperCase()}
+                          {trade.side?.toUpperCase() || 'UNKNOWN'}
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {trade.quantity}
+                        {safeNumber(trade.quantity) || '--'}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {formatCurrency(trade.fill_price)}
+                        {formatCurrency(trade.fill_price || trade.price)}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {formatCurrency(trade.quantity * trade.fill_price)}
+                        {formatCurrency(safeNumber(trade.quantity) * safeNumber(trade.fill_price || trade.price))}
                       </td>
                     </tr>
                   ))}
@@ -246,8 +312,71 @@ export default function TradeFeed() {
             )}
           </>
         ) : (
-          <div className="text-center py-8 text-gray-500">
-            {symbolFilter ? `No trades found for symbol "${symbolFilter}"` : 'No trades found'}
+          <div className="text-center py-16">
+            <div className="flex justify-center mb-6">
+              <div className="relative">
+                <svg className="w-20 h-20 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                </svg>
+                <div className="absolute -top-1 -right-1 w-6 h-6 bg-yellow-400 rounded-full flex items-center justify-center">
+                  <span className="text-xs">💤</span>
+                </div>
+              </div>
+            </div>
+            
+            {symbolFilter ? (
+              <div>
+                <h4 className="text-xl font-medium text-gray-900 mb-3">
+                  📊 No {symbolFilter} Adventures Yet!
+                </h4>
+                <p className="text-gray-600 mb-4 max-w-md mx-auto">
+                  Looks like our AI bot hasn't taken a swing at <span className="font-semibold">{symbolFilter}</span> yet. 
+                  Maybe it's being picky, or perhaps it's waiting for the perfect moment to strike! 🎯
+                </p>
+                <button
+                  onClick={() => setSymbolFilter('')}
+                  className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+                >
+                  <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                  </svg>
+                  Show All Trades
+                </button>
+              </div>
+            ) : (
+              <div>
+                <h4 className="text-xl font-medium text-gray-900 mb-3">
+                  🤖 The Trading Bot is Feeling Shy
+                </h4>
+                <p className="text-gray-600 mb-4 max-w-md mx-auto">
+                  No trades to show yet! Our AI is probably still analyzing the market, 
+                  sipping digital coffee, and perfecting its strategy. Give it a moment to work its magic! ✨
+                </p>
+                <div className="bg-blue-50 rounded-lg p-4 max-w-lg mx-auto">
+                  <div className="flex items-start">
+                    <div className="flex-shrink-0">
+                      <span className="text-2xl">💡</span>
+                    </div>
+                    <div className="ml-3 text-left">
+                      <h5 className="text-sm font-medium text-blue-900">Pro Tip</h5>
+                      <p className="text-sm text-blue-800 mt-1">
+                        Trades appear here when market conditions trigger our SMA crossover + RSI strategy. 
+                        The bot runs every 5 minutes during market hours (9:30 AM - 4:00 PM ET).
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+            
+            <div className="mt-8 flex justify-center space-x-4 text-sm text-gray-400">
+              <span>🕘 Checking every 5 minutes</span>
+              <span>•</span>
+              <span>📈 SMA + RSI Strategy</span>
+              <span>•</span>
+              <span>🎯 Paper Trading Only</span>
+            </div>
           </div>
         )}
       </div>

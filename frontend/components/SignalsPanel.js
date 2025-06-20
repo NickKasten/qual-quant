@@ -52,10 +52,23 @@ export default function SignalsPanel() {
   };
 
   const formatValue = (value) => {
+    if (value === null || value === undefined) {
+      return '---.--';
+    }
     if (typeof value === 'number') {
       return value.toFixed(2);
     }
-    return value?.toString() || 'N/A';
+    return value?.toString() || '---.--';
+  };
+
+  const formatPrice = (value) => {
+    if (value === null || value === undefined) {
+      return '$---.--';
+    }
+    if (typeof value === 'number') {
+      return `$${value.toFixed(2)}`;
+    }
+    return value?.toString() || '$---.--';
   };
 
   if (loading) {
@@ -99,54 +112,104 @@ export default function SignalsPanel() {
           </div>
           
           <div className="text-center py-12">
-            <div className="flex justify-center mb-4">
-              <svg className="w-12 h-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M13 10V3L4 14h7v7l9-11h-7z" />
-              </svg>
+            <div className="flex justify-center mb-6">
+              <div className="relative">
+                <svg className="w-16 h-16 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                </svg>
+                <div className="absolute -top-2 -right-2 w-8 h-8 bg-red-100 rounded-full flex items-center justify-center">
+                  <span className="text-sm">⚡</span>
+                </div>
+              </div>
             </div>
-            <h4 className="text-lg font-medium text-gray-900 mb-2">Trading Signals Unavailable</h4>
-            <p className="text-gray-500 mb-4">Unable to load current market signals</p>
-            <div className="text-sm text-red-600 bg-red-50 px-3 py-2 rounded-md inline-block">
-              {error}
+            <h4 className="text-xl font-medium text-gray-900 mb-3">
+              📡 Signal Transmission Lost!
+            </h4>
+            <p className="text-gray-600 mb-6 max-w-md mx-auto">
+              Our crystal ball seems to be a bit foggy right now. The trading signals are playing hide and seek, 
+              but don't worry - they'll be back once our digital fortune teller gets its act together! 🔮
+            </p>
+            <div className="text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg px-4 py-3 inline-block max-w-lg">
+              <div className="flex items-center">
+                <svg className="w-4 h-4 mr-2 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                </svg>
+                <span className="font-medium">Technical Details:</span>
+              </div>
+              <p className="mt-1 text-xs">{error}</p>
             </div>
           </div>
 
-          <div className="mt-8 border border-gray-200 rounded-lg p-4 opacity-50">
-            <div className="flex items-center justify-between mb-4">
-              <h4 className="text-lg font-medium text-gray-400">DEMO</h4>
-              <div className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-gray-100 text-gray-400">
-                <svg className="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-                </svg>
-                UNAVAILABLE
-              </div>
+          <div className="mt-8 bg-gradient-to-r from-purple-50 to-pink-50 rounded-lg p-6">
+            <div className="text-center mb-6">
+              <h5 className="text-lg font-medium text-purple-900 mb-2">
+                🎪 Signal Preview Theater!
+              </h5>
+              <p className="text-sm text-purple-800">
+                Here's what our AI's trading signals look like when they're feeling chatty:
+              </p>
             </div>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <div>
-                <dt className="text-sm font-medium text-gray-400">SMA 20</dt>
-                <dd className="mt-1 text-sm text-gray-400">---.--</dd>
+            
+            <div className="bg-white rounded-lg shadow-sm border border-purple-200 p-4">
+              <div className="flex items-center justify-between mb-4">
+                <h4 className="text-lg font-medium text-gray-400">AAPL</h4>
+                <div className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800">
+                  <svg className="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-8.293l-3-3a1 1 0 00-1.414-1.414L9 5.586 7.707 4.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4a1 1 0 00-1.414-1.414L10 4.414l2.293 2.293a1 1 0 001.414-1.414z" clipRule="evenodd" />
+                  </svg>
+                  BUY
+                </div>
               </div>
-              <div>
-                <dt className="text-sm font-medium text-gray-400">SMA 50</dt>
-                <dd className="mt-1 text-sm text-gray-400">---.--</dd>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-gray-400">
+                <div>
+                  <dt className="text-sm font-medium">SMA 20</dt>
+                  <dd className="mt-1 text-sm">195.42</dd>
+                </div>
+                <div>
+                  <dt className="text-sm font-medium">SMA 50</dt>
+                  <dd className="mt-1 text-sm">190.18</dd>
+                </div>
+                <div>
+                  <dt className="text-sm font-medium">RSI</dt>
+                  <dd className="mt-1 text-sm">68.5</dd>
+                </div>
+                <div>
+                  <dt className="text-sm font-medium">Current Price</dt>
+                  <dd className="mt-1 text-sm">$196.75</dd>
+                </div>
               </div>
-              <div>
-                <dt className="text-sm font-medium text-gray-400">RSI</dt>
-                <dd className="mt-1 text-sm text-gray-400">---.--</dd>
-              </div>
-              <div>
-                <dt className="text-sm font-medium text-gray-400">Current Price</dt>
-                <dd className="mt-1 text-sm text-gray-400">$---.--</dd>
+              
+              <div className="mt-4 pt-4 border-t border-gray-200">
+                <h5 className="text-sm font-medium text-gray-400 mb-2">Signal Conditions</h5>
+                <div className="space-y-1">
+                  <div className="flex items-center text-sm text-gray-400">
+                    <div className="w-2 h-2 rounded-full mr-2 bg-green-400"></div>
+                    <span>SMA CROSSOVER: Met ✨</span>
+                  </div>
+                  <div className="flex items-center text-sm text-gray-400">
+                    <div className="w-2 h-2 rounded-full mr-2 bg-green-400"></div>
+                    <span>RSI FILTER: Met 🎯</span>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
 
           <div className="mt-6 p-4 bg-blue-50 rounded-lg">
-            <h4 className="text-sm font-medium text-blue-900 mb-2">Strategy Information</h4>
-            <p className="text-sm text-blue-800">
-              Signals are generated using a 20/50-day SMA crossover strategy with RSI filter. 
-              BUY signals require SMA20 &gt; SMA50 and RSI &lt; 70. SELL signals require SMA20 &lt; SMA50 and RSI &gt; 30.
-            </p>
+            <div className="flex items-start">
+              <div className="flex-shrink-0">
+                <span className="text-2xl">🧠</span>
+              </div>
+              <div className="ml-3">
+                <h4 className="text-sm font-medium text-blue-900 mb-2">How Our AI Brain Works</h4>
+                <p className="text-sm text-blue-800">
+                  Our signals use a 20/50-day SMA crossover strategy with RSI filter. 
+                  <strong>BUY</strong> signals fire when SMA20 &gt; SMA50 and RSI &lt; 70. 
+                  <strong>SELL</strong> signals trigger when SMA20 &lt; SMA50 and RSI &gt; 30.
+                  It's like having a very patient, mathematical friend who never gets tired of watching charts! 📊
+                </p>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -204,7 +267,7 @@ export default function SignalsPanel() {
                     <div>
                       <dt className="text-sm font-medium text-gray-500">Current Price</dt>
                       <dd className="mt-1 text-sm text-gray-900">
-                        ${formatValue(data.current_price)}
+                        {formatPrice(data.current_price)}
                       </dd>
                     </div>
                   </div>
@@ -229,8 +292,55 @@ export default function SignalsPanel() {
             ))}
           </div>
         ) : (
-          <div className="text-center py-8 text-gray-500">
-            No signal data available
+          <div className="text-center py-16">
+            <div className="flex justify-center mb-6">
+              <div className="relative">
+                <svg className="w-20 h-20 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                </svg>
+                <div className="absolute -top-1 -right-1 w-6 h-6 bg-yellow-400 rounded-full flex items-center justify-center">
+                  <span className="text-xs">🔍</span>
+                </div>
+              </div>
+            </div>
+            
+            <h4 className="text-xl font-medium text-gray-900 mb-3">
+              🤫 The Signals are Being Mysterious
+            </h4>
+            <p className="text-gray-600 mb-6 max-w-lg mx-auto">
+              Our AI trading signals are currently in stealth mode! They might be cooking up something brilliant 
+              in the background, or perhaps they're just taking a well-deserved break from all that intense market analysis. 🧐
+            </p>
+            
+            <div className="bg-amber-50 rounded-lg p-6 max-w-lg mx-auto">
+              <div className="flex items-start">
+                <div className="flex-shrink-0">
+                  <span className="text-2xl">🎯</span>
+                </div>
+                <div className="ml-3 text-left">
+                  <h5 className="text-sm font-medium text-amber-900 mb-2">What's Coming Next?</h5>
+                  <p className="text-sm text-amber-800">
+                    Signals will appear here when our AI detects trading opportunities using the SMA crossover + RSI strategy. 
+                    The system analyzes market data every 5 minutes during trading hours, so check back soon!
+                  </p>
+                </div>
+              </div>
+            </div>
+            
+            <div className="mt-8 flex justify-center space-x-6 text-sm text-gray-400">
+              <div className="flex items-center">
+                <span className="w-2 h-2 bg-green-400 rounded-full mr-2"></span>
+                <span>BUY signals</span>
+              </div>
+              <div className="flex items-center">
+                <span className="w-2 h-2 bg-red-400 rounded-full mr-2"></span>
+                <span>SELL signals</span>
+              </div>
+              <div className="flex items-center">
+                <span className="w-2 h-2 bg-gray-400 rounded-full mr-2"></span>
+                <span>HOLD signals</span>
+              </div>
+            </div>
           </div>
         )}
 
