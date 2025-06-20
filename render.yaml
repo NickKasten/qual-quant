@@ -62,5 +62,9 @@ services:
         value: "0.02"
       - key: RUN_MODE
         value: "bot"
+      - key: TRADING_SYMBOL
+        value: "AAPL"
+      - key: TRADING_INTERVAL
+        value: "300"
       - key: API_KEY
         sync: false
