@@ -59,7 +59,12 @@ graph TD
 - Alpha Vantage API key (backup)
 
 ### Environment Variables
+
+The project requires different environment variable configurations for backend and frontend components.
+
+#### Backend Environment Variables
 Create a `.env` file in the root directory with the following variables:
+
 ```env
 # API Keys
 ALPACA_API_KEY=your_alpaca_key
@@ -78,7 +83,34 @@ API_KEY=your_secure_api_key_for_endpoints
 MAX_POSITIONS=3
 RISK_PER_TRADE=0.02
 STOP_LOSS=0.05
+STARTING_EQUITY=100000
+MAX_POSITION_SIZE=0.1
+
+# Bot Configuration (for deployment)
+TRADING_SYMBOL=AAPL
+TRADING_INTERVAL=300
+RUN_MODE=bot
 ```
+
+#### Frontend Environment Variables
+Create a `.env.local` file in the `frontend/` directory:
+
+```env
+# Frontend Environment Variables
+# API Configuration
+API_BASE_URL=http://localhost:8000
+API_KEY=your_secure_api_key_for_endpoints
+
+# For production deployment, set API_BASE_URL to your deployed API service URL
+# Example: API_BASE_URL=https://your-api-service.onrender.com
+```
+
+**Important Notes:**
+- The `API_KEY` must match between backend and frontend
+- Frontend uses `Authorization: Bearer <API_KEY>` header format
+- For local development, use `http://localhost:8000` for API_BASE_URL
+- For production, update API_BASE_URL to your deployed API service URL
+- Next.js requires environment variables to be in `.env.local` for local development
 
 ### Installation
 

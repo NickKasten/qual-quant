@@ -6,7 +6,7 @@ class ApiClient {
     this.baseURL = API_BASE_URL;
     this.headers = {
       'Content-Type': 'application/json',
-      'X-API-Key': API_KEY
+      'Authorization': `Bearer ${API_KEY}`
     };
   }
 
@@ -25,7 +25,10 @@ class ApiClient {
           throw new Error(`API endpoint not found: ${endpoint}`);
         }
         if (response.status === 401) {
-          throw new Error('Authentication failed - check API key');
+          throw new Error('Authentication failed - check API key in environment variables');
+        }
+        if (response.status === 403) {
+          throw new Error('Access forbidden - invalid API key or insufficient permissions');
         }
         if (response.status >= 500) {
           throw new Error('Backend server error - please try again later');
