@@ -1,9 +1,10 @@
 services:
+  # API Web Service
   - type: web
     name: vibe-trading-api
     env: docker
     plan: starter
-    dockerfilePath: ./Dockerfile.combined
+    dockerfilePath: ./Dockerfile.api
     dockerContext: .
     branch: main
     envVars:
@@ -29,5 +30,37 @@ services:
         value: "8000"
       - key: RUN_MODE
         value: "api"
+      - key: API_KEY
+        sync: false
+
+  # Trading Bot Background Worker
+  - type: worker
+    name: vibe-trading-bot
+    env: docker
+    plan: starter
+    dockerfilePath: ./Dockerfile.bot
+    dockerContext: .
+    branch: main
+    envVars:
+      - key: TIINGO_API_KEY
+        sync: false
+      - key: ALPHA_VANTAGE_API_KEY
+        sync: false
+      - key: ALPACA_API_KEY
+        sync: false
+      - key: ALPACA_SECRET_KEY
+        sync: false
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_KEY
+        sync: false
+      - key: STARTING_EQUITY
+        value: "100000"
+      - key: MAX_POSITION_SIZE
+        value: "0.1"
+      - key: RISK_PER_TRADE
+        value: "0.02"
+      - key: RUN_MODE
+        value: "bot"
       - key: API_KEY
         sync: false

@@ -21,13 +21,9 @@ RUN mkdir -p /app/logs /app/backend/logs && \
 
 USER appuser
 
-# Set environment variables for API mode
-ENV PORT=8000
+# Set environment variables for bot mode
 ENV PYTHONPATH=/app
-ENV RUN_MODE=api
+ENV RUN_MODE=bot
 
-# Expose port
-EXPOSE 8000
-
-# Run only the API server (no bot)
-CMD ["python", "-m", "backend.app.api_server"]
+# Run only the trading bot in loop mode (background worker)
+CMD ["python", "-m", "backend.app.main", "--loop"]
