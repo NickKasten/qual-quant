@@ -42,7 +42,7 @@ def validate_trade_data(trade_data: Dict) -> bool:
     """
     Validate trade data before writing to database.
     """
-    required_fields = ['symbol', 'side', 'quantity', 'status', 'order_id']
+    required_fields = ['symbol', 'side', 'quantity', 'status', 'order_id', 'price', 'strategy']
     return all(field in trade_data for field in required_fields)
 
 def validate_position_data(position_data: Dict) -> bool:
@@ -230,4 +230,44 @@ def update_equity(trade_result: Dict) -> bool:
             return False
     except Exception as e:
         logger.error(f"Error updating equity: {e}")
+        return False
+
+def validate_signal_data(signal_data: Dict) -> bool:
+    """
+    Validate signal data before writing to database.
+    """
+    required_fields = ['symbol', 'signal_type', 'strength', 'strategy', 'price']
+    return all(field in signal_data for field in required_fields)
+
+def update_signals(signal_data: Dict) -> bool:
+    """
+    Write signal data to Supabase/Postgres signals table.
+    Returns True if successful, False otherwise.
+    """
+    if not signal_data or not validate_signal_data(signal_data):
+        logger.error("Invalid signal data")
+        return False
+
+    if TEST_MODE:
+        logger.info("Test mode: Skipping signal update")
+        return True
+
+    try:
+        # Add timestamp if not provided
+        if 'timestamp' not in signal_data:
+            signal_data['timestamp'] = datetime.now(UTC).isoformat()
+        
+        response = requests.post(
+            f"{SUPABASE_URL}/rest/v1/signals",
+            headers=HEADERS,
+            json=signal_data
+        )
+        if response.status_code == 200:
+            logger.info("Signal stored successfully")
+            return True
+        else:
+            logger.error(f"Failed to store signal: {response.text}")
+            return False
+    except Exception as e:
+        logger.error(f"Error storing signal: {e}")
         return False 

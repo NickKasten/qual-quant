@@ -10,7 +10,7 @@ from backend.app.services.fetcher import fetch_ohlcv
 from bot.strategy.signals import generate_signals
 from bot.risk.risk import calculate_position_size
 from backend.app.services.broker.paper import execute_trade
-from backend.app.db.supabase import update_trades, update_positions, update_equity
+from backend.app.db.supabase import update_trades, update_positions, update_equity, update_signals
 from backend.app.core.config import load_config
 from backend.app.utils.helpers import log_function_call, exponential_backoff, is_market_open, get_time_until_market_open
 from backend.app.db.init_db import init_database
@@ -89,6 +89,17 @@ def run_trading_cycle(symbol: str = "AAPL"):
         if not signals:
             logger.info("No signals generated")
             return
+
+        # Store signals to database
+        current_price = data['close'].iloc[-1] if not data.empty else 100.0
+        signal_data = {
+            'symbol': symbol,
+            'signal_type': signals.get('side', 'hold'),
+            'strength': signals.get('strength', 0.5),
+            'strategy': 'SMA_RSI',
+            'price': current_price
+        }
+        update_signals(signal_data)
 
         # Get current equity and open positions from DB or config
         current_equity = float(settings["STARTING_EQUITY"])

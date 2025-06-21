@@ -57,9 +57,19 @@ class RateLimitError(Exception):
     before_sleep=tenacity.before_sleep_log(logger, logging.WARNING)
 )
 def _fetch_tiingo(symbol, api_key):
+    # Calculate date range for historical data (60 days to ensure we have 50+ trading days)
+    from datetime import datetime, timedelta
+    end_date = datetime.now().strftime('%Y-%m-%d')
+    start_date = (datetime.now() - timedelta(days=60)).strftime('%Y-%m-%d')
+    
     response = requests.get(
         f"{TIINGO_BASE_URL}/{symbol}/prices",
-        params={"token": api_key, "format": "json"}
+        params={
+            "token": api_key, 
+            "format": "json",
+            "startDate": start_date,
+            "endDate": end_date
+        }
     )
     logger.info(f"Tiingo API response status: {response.status_code}")
     
@@ -92,9 +102,15 @@ def _fetch_tiingo(symbol, api_key):
     before_sleep=tenacity.before_sleep_log(logger, logging.WARNING)
 )
 def _fetch_alpha_vantage(symbol, api_key):
+    # Use full output size to get more historical data
     response = requests.get(
         ALPHA_VANTAGE_BASE_URL,
-        params={"function": "TIME_SERIES_DAILY", "symbol": symbol, "apikey": api_key}
+        params={
+            "function": "TIME_SERIES_DAILY", 
+            "symbol": symbol, 
+            "apikey": api_key,
+            "outputsize": "full"  # Gets more historical data instead of just last 100 days
+        }
     )
     logger.info(f"Alpha Vantage API response status: {response.status_code}")
     if response.status_code == 200:

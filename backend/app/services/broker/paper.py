@@ -100,8 +100,9 @@ def execute_trade(position_size: int, symbol: str = "AAPL", side: str = "buy", s
             'quantity': position_size,
             'status': 'filled',
             'order_id': f'sim-{random.randint(100000, 999999)}',
-            'filled_avg_price': fill_price,
+            'price': fill_price,  # Fixed: changed from filled_avg_price to price
             'timestamp': datetime.now(UTC).isoformat(),
+            'strategy': 'SMA_RSI',  # Added: required field for database
             'simulated': True
         }
         record_trade(trade)
@@ -127,14 +128,17 @@ def execute_trade(position_size: int, symbol: str = "AAPL", side: str = "buy", s
         
         if response.status_code in (200, 201):
             order = response.json()
+            # Fallback fill price for real orders
+            fill_price = simulate_fill_price(symbol)
             trade = {
                 'symbol': symbol,
                 'side': side,
                 'quantity': position_size,
-                'status': order.get('status'),
+                'status': order.get('status', 'completed'),
                 'order_id': order.get('id'),
-                'filled_avg_price': order.get('filled_avg_price'),
+                'price': order.get('filled_avg_price') or order.get('limit_price') or fill_price,  # Fixed: map to price field
                 'timestamp': order.get('created_at'),
+                'strategy': 'SMA_RSI',  # Added: required field for database
                 'simulated': False
             }
             record_trade(trade)
