@@ -57,10 +57,10 @@ class RateLimitError(Exception):
     before_sleep=tenacity.before_sleep_log(logger, logging.WARNING)
 )
 def _fetch_tiingo(symbol, api_key):
-    # Calculate date range for historical data (60 days to ensure we have 50+ trading days)
+    # Calculate date range for historical data (120 days to ensure we have 80+ trading days)
     from datetime import datetime, timedelta
     end_date = datetime.now().strftime('%Y-%m-%d')
-    start_date = (datetime.now() - timedelta(days=60)).strftime('%Y-%m-%d')
+    start_date = (datetime.now() - timedelta(days=120)).strftime('%Y-%m-%d')
     
     response = requests.get(
         f"{TIINGO_BASE_URL}/{symbol}/prices",

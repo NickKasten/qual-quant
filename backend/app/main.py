@@ -95,10 +95,16 @@ def run_trading_cycle(symbol: str = "AAPL"):
         signal_data = {
             'symbol': symbol,
             'signal_type': signals.get('side', 'hold'),
-            'strength': signals.get('strength', 0.5),
+            'strength': signals.get('strength', 0.5),  # Now comes from signal generation
             'strategy': 'SMA_RSI',
             'price': current_price
         }
+        
+        # Log signal details for debugging
+        logger.info(f"Generated signal: {signals.get('side')} with strength {signals.get('strength')}")
+        if signals.get('used_fallback'):
+            logger.info("Used fallback strategy due to insufficient data")
+        
         update_signals(signal_data)
 
         # Get current equity and open positions from DB or config
