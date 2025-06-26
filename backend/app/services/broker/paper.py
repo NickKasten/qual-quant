@@ -63,6 +63,10 @@ def validate_order_inputs(position_size: int, symbol: str, side: str) -> Tuple[b
     if side not in ['buy', 'sell']:
         return False, "Invalid order side. Must be 'buy' or 'sell'"
     
+    # Additional validation for realistic position sizes
+    if position_size > 10000:  # Prevent massive positions
+        return False, f"Position size {position_size} exceeds reasonable limit (10,000 shares)"
+    
     return True, ""
 
 def validate_api_credentials() -> Tuple[bool, str]:

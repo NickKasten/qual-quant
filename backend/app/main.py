@@ -107,24 +107,61 @@ def run_trading_cycle(symbol: str = "AAPL"):
         
         update_signals(signal_data)
 
-        # Get current equity and open positions from DB or config
+        # Get current equity and open positions from DB
         current_equity = float(settings["STARTING_EQUITY"])
-        open_positions = 0  # TODO: fetch from DB if available
+        
+        # Fetch current positions from database
+        from backend.app.db.operations import DatabaseOperations
+        db_ops = DatabaseOperations()
+        current_positions = db_ops.get_positions()
+        open_positions = len(current_positions)
+        
+        # Get current position for this symbol (if any)
+        existing_position = None
+        for pos in current_positions:
+            if pos.symbol == symbol:
+                existing_position = pos
+                break
+        
+        logger.info(f"Current positions: {open_positions}, Existing {symbol} position: {existing_position.quantity if existing_position else 0}")
 
         # Calculate position size based on risk
-        position_size_data = calculate_position_size(signals, current_equity, open_positions)
+        current_price = data['close'].iloc[-1] if not data.empty else 100.0
+        position_size_data = calculate_position_size(signals, current_equity, open_positions, current_price)
         if not position_size_data:
             logger.info("No position size calculated")
             return
 
         # Extract the actual position size value
         position_size = position_size_data['position_size']
-        logger.info(f"Using position size: {position_size} shares")
-
-        # Determine trade side from signals
         side = signals.get('side', 'buy')
+        
+        logger.info(f"Using position size: {position_size} shares for {side.upper()} trade")
 
-        # Execute simulated trade
+        # VALIDATE TRADE BEFORE EXECUTION
+        if side == 'sell':
+            if not existing_position or existing_position.quantity <= 0:
+                logger.warning(f"Cannot SELL {symbol}: No existing position to sell")
+                return
+            
+            if position_size > existing_position.quantity:
+                logger.warning(f"Cannot SELL {position_size} shares: Only own {existing_position.quantity} shares")
+                # Adjust to sell available quantity
+                position_size = int(existing_position.quantity)
+                logger.info(f"Adjusted SELL size to {position_size} shares (max available)")
+        
+        elif side == 'buy':
+            # Check if we have enough cash for BUY trade
+            required_cash = position_size * current_price
+            # Get latest equity info
+            equity_history = db_ops.get_equity_history()
+            if equity_history:
+                available_cash = equity_history[-1].cash
+                if available_cash < required_cash:
+                    logger.warning(f"Cannot BUY {position_size} shares: Need ${required_cash:.2f}, only have ${available_cash:.2f}")
+                    return
+        
+        # Execute validated trade
         trade_result = execute_trade(position_size, symbol=symbol, side=side, simulate=True)
         if not trade_result:
             logger.error("Failed to execute trade")
@@ -133,25 +170,87 @@ def run_trading_cycle(symbol: str = "AAPL"):
         # Update database with trade, positions, and equity
         update_trades(trade_result)
         
-        # Transform trade data for position update
-        position_data = {
-            'symbol': trade_result['symbol'],
-            'quantity': trade_result['quantity'],
-            'average_entry_price': trade_result['price'],  # Map to correct schema field
-            'current_price': trade_result['price'],
-            'unrealized_pnl': 0.0,  # Start with zero P&L
-            'timestamp': trade_result['timestamp']
-        }
-        update_positions(position_data)
+        # UPDATE POSITIONS CORRECTLY BASED ON TRADE DIRECTION
+        if side == 'buy':
+            # BUY: Add to position (or create new position)
+            if existing_position:
+                # Update existing position with weighted average price
+                total_shares = existing_position.quantity + trade_result['quantity']
+                total_value = (existing_position.quantity * existing_position.average_entry_price) + (trade_result['quantity'] * trade_result['price'])
+                new_avg_price = total_value / total_shares
+                
+                position_data = {
+                    'symbol': trade_result['symbol'],
+                    'quantity': total_shares,
+                    'average_entry_price': new_avg_price,
+                    'current_price': trade_result['price'],
+                    'unrealized_pnl': (trade_result['price'] - new_avg_price) * total_shares,
+                    'timestamp': trade_result['timestamp']
+                }
+                logger.info(f"Updating existing position: {total_shares} shares @ ${new_avg_price:.2f} avg")
+            else:
+                # Create new position
+                position_data = {
+                    'symbol': trade_result['symbol'],
+                    'quantity': trade_result['quantity'],
+                    'average_entry_price': trade_result['price'],
+                    'current_price': trade_result['price'],
+                    'unrealized_pnl': 0.0,
+                    'timestamp': trade_result['timestamp']
+                }
+                logger.info(f"Creating new position: {trade_result['quantity']} shares @ ${trade_result['price']:.2f}")
+            
+            update_positions(position_data)
+            
+        elif side == 'sell':
+            # SELL: Reduce position (or close completely)
+            if existing_position:
+                remaining_shares = existing_position.quantity - trade_result['quantity']
+                
+                if remaining_shares > 0:
+                    # Partial sale - keep position with same avg price
+                    position_data = {
+                        'symbol': trade_result['symbol'],
+                        'quantity': remaining_shares,
+                        'average_entry_price': existing_position.average_entry_price,
+                        'current_price': trade_result['price'],
+                        'unrealized_pnl': (trade_result['price'] - existing_position.average_entry_price) * remaining_shares,
+                        'timestamp': trade_result['timestamp']
+                    }
+                    update_positions(position_data)
+                    logger.info(f"Reduced position to {remaining_shares} shares @ ${existing_position.average_entry_price:.2f} avg")
+                else:
+                    # Complete sale - remove position
+                    # TODO: Implement position deletion logic
+                    logger.info(f"Position closed completely by selling {trade_result['quantity']} shares")
         
-        # Transform trade data for equity update  
+        # CALCULATE EQUITY CORRECTLY
+        # Get current cash from previous equity record
+        equity_history = db_ops.get_equity_history()
+        previous_cash = equity_history[-1].cash if equity_history else current_equity
+        
+        # Calculate cash change based on trade
+        if side == 'buy':
+            new_cash = previous_cash - (trade_result['quantity'] * trade_result['price'])
+        else:  # sell
+            new_cash = previous_cash + (trade_result['quantity'] * trade_result['price'])
+        
+        # Calculate total portfolio value
+        total_position_value = 0
+        for pos in db_ops.get_positions():
+            total_position_value += pos.quantity * pos.current_price
+        
+        total_portfolio_value = new_cash + total_position_value
+        
         equity_data = {
-            'equity': current_equity,  # Use current equity value
-            'cash': current_equity - (trade_result['quantity'] * trade_result['price']),  # Calculate remaining cash
-            'total_value': current_equity,  # Total portfolio value
+            'equity': total_portfolio_value,
+            'cash': new_cash,
+            'total_value': total_portfolio_value,
             'timestamp': trade_result['timestamp']
         }
         update_equity(equity_data)
+        
+        logger.info(f"Portfolio update: Cash=${new_cash:.2f}, Positions=${total_position_value:.2f}, Total=${total_portfolio_value:.2f}")
 
         logger.info("Trading cycle completed successfully")
     except Exception as e:
