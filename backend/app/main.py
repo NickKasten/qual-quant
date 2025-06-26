@@ -13,6 +13,7 @@ from backend.app.services.broker.paper import execute_trade
 from backend.app.db.supabase import update_trades, update_positions, update_equity, update_signals
 from backend.app.core.config import load_config
 from backend.app.utils.helpers import log_function_call, exponential_backoff, is_market_open, get_time_until_market_open
+from backend.app.utils.monitoring import monitor
 from backend.app.db.init_db import init_database
 
 # Configure logging with proper error handling
@@ -81,7 +82,9 @@ def run_trading_cycle(symbol: str = "AAPL"):
         # Fetch OHLCV data
         data = fetch_ohlcv(symbol)
         if data is None or not hasattr(data, 'empty') or data.empty:
-            logger.error("Failed to fetch OHLCV data or data is empty")
+            error_msg = "No market data available (all sources failed or returned empty data)"
+            logger.info(f"⏭️  Trading cycle skipped: {error_msg}")
+            monitor.record_failure(error_msg)
             return
 
         # Get current equity and open positions from DB first (needed for signal generation)
@@ -255,12 +258,15 @@ def run_trading_cycle(symbol: str = "AAPL"):
         logger.info(f"Portfolio update: Cash=${new_cash:.2f}, Positions=${total_position_value:.2f}, Total=${total_portfolio_value:.2f}")
 
         logger.info("Trading cycle completed successfully")
+        monitor.record_success()
     except Exception as e:
-        logger.error(f"Error in trading cycle: {e}", exc_info=True)
+        error_msg = f"Error in trading cycle: {e}"
+        logger.error(error_msg, exc_info=True)
+        monitor.record_failure(error_msg)
 
 def main():
     # Setup application
-    settings = setup_application()
+    setup_application()
     
     parser = argparse.ArgumentParser(description="AI Trading Bot Main Loop")
     parser.add_argument('--symbol', type=str, default=os.environ.get("TRADING_SYMBOL", "AAPL"), help="Ticker symbol to trade")

@@ -6,20 +6,42 @@ import pandas as pd
 from typing import Optional
 import tenacity
 
+try:
+    import yfinance as yf
+    YFINANCE_AVAILABLE = True
+except ImportError:
+    YFINANCE_AVAILABLE = False
+    logging.warning("yfinance not available, skipping as fallback option")
+
 logger = logging.getLogger(__name__)
 
 TIINGO_BASE_URL = "https://api.tiingo.com/tiingo/daily"
 ALPHA_VANTAGE_BASE_URL = "https://www.alphavantage.co/query"
 
-# Simple in-memory cache
+# Enhanced in-memory cache with fallback support
 cache = {}
+fallback_cache = {}  # Long-term cache for emergency fallback
 CACHE_TTL = 300  # 5 minutes
+FALLBACK_CACHE_TTL = 86400  # 24 hours
 
 def _get_api_keys():
-    """Get API keys from environment variables."""
+    """Get API keys from environment variables, including rotation support."""
+    alpha_vantage_keys = []
+    
+    # Primary Alpha Vantage key
+    primary_key = os.getenv("ALPHA_VANTAGE_API_KEY")
+    if primary_key:
+        alpha_vantage_keys.append(primary_key)
+    
+    # Additional Alpha Vantage keys for rotation (ALPHA_VANTAGE_API_KEY_2, etc.)
+    for i in range(2, 6):  # Support up to 5 keys
+        key = os.getenv(f"ALPHA_VANTAGE_API_KEY_{i}")
+        if key:
+            alpha_vantage_keys.append(key)
+    
     return {
         'tiingo': os.getenv("TIINGO_API_KEY"),
-        'alpha_vantage': os.getenv("ALPHA_VANTAGE_API_KEY")
+        'alpha_vantage_keys': alpha_vantage_keys
     }
 
 def _process_tiingo_data(data: list) -> pd.DataFrame:
@@ -94,15 +116,8 @@ def _fetch_tiingo(symbol, api_key):
         logger.error(f"Tiingo API error: {response.text}")
         raise Exception(f"Tiingo API error (status: {response.status_code})")
 
-@tenacity.retry(
-    stop=tenacity.stop_after_attempt(3),
-    wait=tenacity.wait_exponential(multiplier=1, min=2, max=10),
-    retry=tenacity.retry_if_exception_type(Exception),
-    reraise=True,
-    before_sleep=tenacity.before_sleep_log(logger, logging.WARNING)
-)
-def _fetch_alpha_vantage(symbol, api_key):
-    # Use full output size to get more historical data
+def _fetch_alpha_vantage_with_key(symbol, api_key):
+    """Fetch data from Alpha Vantage with a single key."""
     response = requests.get(
         ALPHA_VANTAGE_BASE_URL,
         params={
@@ -113,21 +128,79 @@ def _fetch_alpha_vantage(symbol, api_key):
         }
     )
     logger.info(f"Alpha Vantage API response status: {response.status_code}")
+    
     if response.status_code == 200:
         data = response.json()
         if 'Error Message' in data:
             logger.error(f"Alpha Vantage API error: {data['Error Message']}")
             raise Exception("Alpha Vantage API error")
+        # Check for rate limit messages
+        if 'Note' in data and 'rate limit' in data['Note'].lower():
+            logger.warning(f"Alpha Vantage rate limit: {data['Note']}")
+            raise RateLimitError(f"Alpha Vantage rate limit: {data['Note']}")
         df = _process_alpha_vantage_data(data)
         return df
     else:
         logger.error(f"Alpha Vantage API error: {response.text}")
-        raise Exception("Alpha Vantage API error")
+        raise Exception(f"Alpha Vantage API error (status: {response.status_code})")
+
+def _fetch_alpha_vantage(symbol, api_keys):
+    """Fetch data from Alpha Vantage with key rotation."""
+    if not api_keys:
+        raise Exception("No Alpha Vantage API keys available")
+    
+    for i, api_key in enumerate(api_keys):
+        try:
+            logger.info(f"Trying Alpha Vantage key #{i+1}")
+            return _fetch_alpha_vantage_with_key(symbol, api_key)
+        except RateLimitError as e:
+            logger.warning(f"Alpha Vantage key #{i+1} hit rate limit: {str(e)}")
+            if i == len(api_keys) - 1:  # Last key
+                raise e
+            logger.info(f"Rotating to next Alpha Vantage key...")
+            continue
+        except Exception as e:
+            logger.error(f"Alpha Vantage key #{i+1} failed: {str(e)}")
+            if i == len(api_keys) - 1:  # Last key
+                raise e
+            continue
+    
+    raise Exception("All Alpha Vantage keys failed")
+
+def _fetch_yfinance(symbol):
+    """Fetch data from yfinance as a last resort fallback."""
+    if not YFINANCE_AVAILABLE:
+        raise Exception("yfinance not available")
+    
+    logger.info("Fetching data from yfinance")
+    
+    # Get 6 months of data to ensure sufficient history
+    ticker = yf.Ticker(symbol)
+    df = ticker.history(period="6mo")
+    
+    if df.empty:
+        raise Exception("yfinance returned empty data")
+    
+    # Rename columns to match expected format
+    df.columns = df.columns.str.lower()
+    
+    # Ensure we have the required columns
+    required_cols = {'open', 'high', 'low', 'close', 'volume'}
+    if not required_cols.issubset(df.columns):
+        raise Exception(f"yfinance data missing required columns: {required_cols - set(df.columns)}")
+    
+    logger.info(f"yfinance data shape: {df.shape}")
+    return df
 
 def fetch_ohlcv(symbol: str = "AAPL") -> Optional[pd.DataFrame]:
     """
-    Fetch OHLCV data from Tiingo (primary) or Alpha Vantage (fallback), with caching.
-    Automatically falls back to Alpha Vantage if Tiingo hits rate limits.
+    Fetch OHLCV data with multiple fallbacks and caching.
+    
+    Data sources (in order):
+    1. Tiingo API (primary - most reliable)
+    2. Alpha Vantage API (fallback with key rotation)
+    3. yfinance (last resort - free but less reliable)
+    
     Returns a pandas DataFrame with OHLCV data.
     """
     logger.info(f"Fetching OHLCV data for {symbol}")
@@ -150,7 +223,9 @@ def fetch_ohlcv(symbol: str = "AAPL") -> Optional[pd.DataFrame]:
             df = _fetch_tiingo(symbol, api_keys['tiingo'])
             if not df.empty and required_cols.issubset(df.columns):
                 logger.info(f"✅ Successfully fetched from Tiingo - data shape: {df.shape}")
+                # Update both regular cache and fallback cache
                 cache[cache_key] = {'data': df, 'timestamp': time.time()}
+                fallback_cache[cache_key] = {'data': df, 'timestamp': time.time()}
                 return df
             else:
                 logger.error("❌ Processed Tiingo data is empty or missing required columns")
@@ -163,21 +238,51 @@ def fetch_ohlcv(symbol: str = "AAPL") -> Optional[pd.DataFrame]:
     else:
         logger.warning("⚠️  Tiingo API key not found, using Alpha Vantage")
 
-    # Fallback to Alpha Vantage
-    if api_keys['alpha_vantage']:
-        logger.info("🔸 Attempting to fetch from Alpha Vantage API (fallback source)")
+    # Fallback to Alpha Vantage with key rotation
+    if api_keys['alpha_vantage_keys']:
+        logger.info(f"🔸 Attempting to fetch from Alpha Vantage API (fallback source) with {len(api_keys['alpha_vantage_keys'])} keys")
         try:
-            df = _fetch_alpha_vantage(symbol, api_keys['alpha_vantage'])
+            df = _fetch_alpha_vantage(symbol, api_keys['alpha_vantage_keys'])
             if not df.empty and required_cols.issubset(df.columns):
                 logger.info(f"✅ Successfully fetched from Alpha Vantage - data shape: {df.shape}")
+                # Update both regular cache and fallback cache
                 cache[cache_key] = {'data': df, 'timestamp': time.time()}
+                fallback_cache[cache_key] = {'data': df, 'timestamp': time.time()}
                 return df
             else:
                 logger.error("❌ Processed Alpha Vantage data is empty or missing required columns")
         except Exception as e:
             logger.error(f"❌ Error fetching from Alpha Vantage: {str(e)}")
     else:
-        logger.warning("⚠️  Alpha Vantage API key not found")
+        logger.warning("⚠️  No Alpha Vantage API keys found")
 
-    logger.error("❌ Failed to fetch OHLCV data from both Tiingo and Alpha Vantage")
+    # Last resort: yfinance
+    if YFINANCE_AVAILABLE:
+        logger.info("🔺 Attempting to fetch from yfinance (last resort)")
+        try:
+            df = _fetch_yfinance(symbol)
+            if not df.empty and required_cols.issubset(df.columns):
+                logger.info(f"✅ Successfully fetched from yfinance - data shape: {df.shape}")
+                # Update both regular cache and fallback cache
+                cache[cache_key] = {'data': df, 'timestamp': time.time()}
+                fallback_cache[cache_key] = {'data': df, 'timestamp': time.time()}
+                return df
+            else:
+                logger.error("❌ Processed yfinance data is empty or missing required columns")
+        except Exception as e:
+            logger.error(f"❌ Error fetching from yfinance: {str(e)}")
+    else:
+        logger.warning("⚠️  yfinance not available")
+
+    # Final fallback: use cached data if available (even if stale)
+    if cache_key in fallback_cache:
+        age_hours = (time.time() - fallback_cache[cache_key]['timestamp']) / 3600
+        if age_hours < 24:  # Use cache if less than 24 hours old
+            logger.warning(f"🔄 Using stale cached data from {age_hours:.1f} hours ago")
+            return fallback_cache[cache_key]['data']
+        else:
+            logger.warning(f"🗑️  Cached data too old ({age_hours:.1f} hours), discarding")
+
+    # Graceful skip instead of error
+    logger.warning("⏭️  GRACEFUL SKIP: All data sources unavailable, trading cycle will be skipped")
     return None 
