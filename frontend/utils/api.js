@@ -47,7 +47,7 @@ class ApiClient {
   }
 
   async getPortfolio() {
-    return this.request('/portfolio');
+    return this.request('/api/portfolio');
   }
 
   async getTrades(page = 1, pageSize = 20, symbol = null) {
@@ -60,19 +60,19 @@ class ApiClient {
       params.append('symbol', symbol);
     }
     
-    return this.request(`/trades?${params}`);
+    return this.request(`/api/trades?${params}`);
   }
 
   async getPerformance(days = 30) {
-    return this.request(`/performance?days=${days}`);
+    return this.request(`/api/performance?days=${days}`);
   }
 
   async getSignals() {
-    return this.request('/signals');
+    return this.request('/api/signals');
   }
 
   async getStatus() {
-    return this.request('/status');
+    return this.request('/api/status');
   }
 }
 

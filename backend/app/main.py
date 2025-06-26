@@ -112,10 +112,14 @@ def run_trading_cycle(symbol: str = "AAPL"):
         open_positions = 0  # TODO: fetch from DB if available
 
         # Calculate position size based on risk
-        position_size = calculate_position_size(signals, current_equity, open_positions)
-        if not position_size:
+        position_size_data = calculate_position_size(signals, current_equity, open_positions)
+        if not position_size_data:
             logger.info("No position size calculated")
             return
+
+        # Extract the actual position size value
+        position_size = position_size_data['position_size']
+        logger.info(f"Using position size: {position_size} shares")
 
         # Determine trade side from signals
         side = signals.get('side', 'buy')
@@ -128,8 +132,26 @@ def run_trading_cycle(symbol: str = "AAPL"):
 
         # Update database with trade, positions, and equity
         update_trades(trade_result)
-        update_positions(trade_result)
-        update_equity(trade_result)
+        
+        # Transform trade data for position update
+        position_data = {
+            'symbol': trade_result['symbol'],
+            'quantity': trade_result['quantity'],
+            'average_entry_price': trade_result['price'],  # Map to correct schema field
+            'current_price': trade_result['price'],
+            'unrealized_pnl': 0.0,  # Start with zero P&L
+            'timestamp': trade_result['timestamp']
+        }
+        update_positions(position_data)
+        
+        # Transform trade data for equity update  
+        equity_data = {
+            'equity': current_equity,  # Use current equity value
+            'cash': current_equity - (trade_result['quantity'] * trade_result['price']),  # Calculate remaining cash
+            'total_value': current_equity,  # Total portfolio value
+            'timestamp': trade_result['timestamp']
+        }
+        update_equity(equity_data)
 
         logger.info("Trading cycle completed successfully")
     except Exception as e:

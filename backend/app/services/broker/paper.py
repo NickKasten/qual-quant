@@ -98,12 +98,12 @@ def execute_trade(position_size: int, symbol: str = "AAPL", side: str = "buy", s
             'symbol': symbol,
             'side': side,
             'quantity': position_size,
-            'status': 'filled',
+            'status': 'completed',
             'order_id': f'sim-{random.randint(100000, 999999)}',
             'price': fill_price,  # Fixed: changed from filled_avg_price to price
             'timestamp': datetime.now(UTC).isoformat(),
-            'strategy': 'SMA_RSI',  # Added: required field for database
-            'simulated': True
+            'strategy': 'SMA_RSI'  # Added: required field for database
+            # Removed 'simulated': True - not in database schema
         }
         record_trade(trade)
         logger.info(f"Simulated trade: {trade}")

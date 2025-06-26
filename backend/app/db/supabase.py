@@ -49,11 +49,11 @@ def validate_position_data(position_data: Dict) -> bool:
     """
     Validate position data before writing to database.
     """
-    required_fields = ['symbol', 'quantity', 'filled_avg_price']
+    required_fields = ['symbol', 'quantity', 'average_entry_price']
     if not all(field in position_data for field in required_fields):
         return False
     try:
-        float(position_data['filled_avg_price'])
+        float(position_data['average_entry_price'])
         return True
     except (ValueError, TypeError):
         return False
@@ -62,7 +62,7 @@ def validate_equity_data(equity_data: Dict) -> bool:
     """
     Validate equity data before writing to database.
     """
-    required_fields = ['equity', 'timestamp']
+    required_fields = ['equity', 'cash', 'total_value', 'timestamp']
     return all(field in equity_data for field in required_fields)
 
 def setup_tables():
