@@ -56,7 +56,7 @@ def validate_data_sufficiency(data: pd.DataFrame) -> Dict[str, bool]:
         'total_days': len(data)
     }
 
-def generate_signals(data: pd.DataFrame, use_precalculated: bool = False) -> Optional[Dict]:
+def generate_signals(data: pd.DataFrame, use_precalculated: bool = False, existing_position: Optional[float] = None) -> Optional[Dict]:
     """
     Generate trading signals based on 20/50 SMA crossover and RSI filter (70/30).
     Returns a dictionary with signal (-1, 0, 1), side ('buy', 'sell', 'hold'), strength, and the processed data.
@@ -64,6 +64,7 @@ def generate_signals(data: pd.DataFrame, use_precalculated: bool = False) -> Opt
     Args:
         data: DataFrame with OHLCV data
         use_precalculated: If True, use existing SMA20, SMA50, and RSI columns
+        existing_position: Current position quantity (None or 0 means no position)
     """
     if data.empty or 'close' not in data.columns:
         logger.error("Invalid data: empty or missing 'close' column")
@@ -117,10 +118,30 @@ def generate_signals(data: pd.DataFrame, use_precalculated: bool = False) -> Opt
         
     latest_signal = int(latest_signal)
     
-    if latest_signal == 1:
-        side = 'buy'
-    elif latest_signal == -1:
-        side = 'sell'
+    # Adjust signal based on existing position
+    has_position = existing_position is not None and existing_position > 0
+    
+    if latest_signal == 1:  # Buy signal
+        if has_position:
+            # Already have position, convert to hold unless strong buy signal
+            strength = calculate_signal_strength(data, latest_signal)
+            if strength < 0.8:  # Only buy more if very strong signal
+                latest_signal = 0
+                side = 'hold'
+                logger.info(f"Buy signal suppressed: already have {existing_position} shares (strength {strength:.2f} < 0.8)")
+            else:
+                side = 'buy'
+                logger.info(f"Strong buy signal maintained despite existing position of {existing_position} shares")
+        else:
+            side = 'buy'
+    elif latest_signal == -1:  # Sell signal
+        if not has_position:
+            # No position to sell, convert to hold
+            latest_signal = 0
+            side = 'hold'
+            logger.info("Sell signal suppressed: no existing position to sell")
+        else:
+            side = 'sell'
     else:
         side = 'hold'
     

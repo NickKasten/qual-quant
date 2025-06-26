@@ -266,7 +266,9 @@ def update_signals(signal_data: Dict) -> bool:
             logger.info("Signal stored successfully")
             return True
         else:
-            logger.error(f"Failed to store signal: {response.text}")
+            logger.error(f"Failed to store signal: {response.status_code} - {response.text}")
+            logger.error(f"Signal data attempted: {signal_data}")
+            logger.error(f"Supabase URL: {SUPABASE_URL}")
             return False
     except Exception as e:
         logger.error(f"Error storing signal: {e}")

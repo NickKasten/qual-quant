@@ -84,8 +84,28 @@ def run_trading_cycle(symbol: str = "AAPL"):
             logger.error("Failed to fetch OHLCV data or data is empty")
             return
 
-        # Generate trading signals
-        signals = generate_signals(data)
+        # Get current equity and open positions from DB first (needed for signal generation)
+        current_equity = float(settings["STARTING_EQUITY"])
+        
+        # Fetch current positions from database
+        from backend.app.db.operations import DatabaseOperations
+        db_ops = DatabaseOperations()
+        current_positions = db_ops.get_positions()
+        open_positions = len(current_positions)
+        
+        # Get current position for this symbol (if any)
+        existing_position = None
+        existing_position_qty = 0
+        for pos in current_positions:
+            if pos.symbol == symbol:
+                existing_position = pos
+                existing_position_qty = pos.quantity
+                break
+        
+        logger.info(f"Current positions: {open_positions}, Existing {symbol} position: {existing_position_qty}")
+
+        # Generate trading signals with position awareness
+        signals = generate_signals(data, existing_position=existing_position_qty)
         if not signals:
             logger.info("No signals generated")
             return
@@ -106,24 +126,6 @@ def run_trading_cycle(symbol: str = "AAPL"):
             logger.info("Used fallback strategy due to insufficient data")
         
         update_signals(signal_data)
-
-        # Get current equity and open positions from DB
-        current_equity = float(settings["STARTING_EQUITY"])
-        
-        # Fetch current positions from database
-        from backend.app.db.operations import DatabaseOperations
-        db_ops = DatabaseOperations()
-        current_positions = db_ops.get_positions()
-        open_positions = len(current_positions)
-        
-        # Get current position for this symbol (if any)
-        existing_position = None
-        for pos in current_positions:
-            if pos.symbol == symbol:
-                existing_position = pos
-                break
-        
-        logger.info(f"Current positions: {open_positions}, Existing {symbol} position: {existing_position.quantity if existing_position else 0}")
 
         # Calculate position size based on risk
         current_price = data['close'].iloc[-1] if not data.empty else 100.0

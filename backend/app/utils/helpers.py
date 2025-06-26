@@ -31,13 +31,20 @@ logger.addHandler(file_handler)
 def log_function_call(func):
     @functools.wraps(func)
     def wrapper(*args, **kwargs):
-        logger.info(f"Entering {func.__name__} with args: {args}, kwargs: {kwargs}")
+        # Avoid duplicate logging for functions that are already wrapped
+        if not hasattr(wrapper, '_already_logged'):
+            logger.info(f"Entering {func.__name__} with args: {args}, kwargs: {kwargs}")
+            wrapper._already_logged = True
         try:
             result = func(*args, **kwargs)
-            logger.info(f"Exiting {func.__name__} with result: {result}")
+            if hasattr(wrapper, '_already_logged'):
+                logger.info(f"Exiting {func.__name__} with result: {result}")
+                delattr(wrapper, '_already_logged')
             return result
         except Exception as e:
             logger.error(f"Error in {func.__name__}: {e}", exc_info=True)
+            if hasattr(wrapper, '_already_logged'):
+                delattr(wrapper, '_already_logged')
             raise
     return wrapper
 
