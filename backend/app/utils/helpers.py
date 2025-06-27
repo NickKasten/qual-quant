@@ -31,21 +31,27 @@ logger.addHandler(file_handler)
 def log_function_call(func):
     @functools.wraps(func)
     def wrapper(*args, **kwargs):
-        # Avoid duplicate logging for functions that are already wrapped
-        if not hasattr(wrapper, '_already_logged'):
-            logger.info(f"Entering {func.__name__} with args: {args}, kwargs: {kwargs}")
-            wrapper._already_logged = True
+        # Check if we're already inside a logged call to prevent duplicates
+        call_stack_key = f"_logging_{func.__name__}"
+        if hasattr(wrapper, call_stack_key):
+            # Already logging this function, just call it
+            return func(*args, **kwargs)
+        
+        # Mark that we're logging this function
+        setattr(wrapper, call_stack_key, True)
+        logger.info(f"Entering {func.__name__} with args: {args}, kwargs: {kwargs}")
+        
         try:
             result = func(*args, **kwargs)
-            if hasattr(wrapper, '_already_logged'):
-                logger.info(f"Exiting {func.__name__} with result: {result}")
-                delattr(wrapper, '_already_logged')
+            logger.info(f"Exiting {func.__name__} with result: {result}")
             return result
         except Exception as e:
             logger.error(f"Error in {func.__name__}: {e}", exc_info=True)
-            if hasattr(wrapper, '_already_logged'):
-                delattr(wrapper, '_already_logged')
             raise
+        finally:
+            # Clean up the marker
+            if hasattr(wrapper, call_stack_key):
+                delattr(wrapper, call_stack_key)
     return wrapper
 
 def exponential_backoff(max_retries=3, base_delay=1):

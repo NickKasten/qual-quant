@@ -164,7 +164,7 @@ def update_trades(trade_result: Dict) -> bool:
             headers=HEADERS,
             json=trade_result
         )
-        if response.status_code == 200:
+        if response.status_code in [200, 201]:
             logger.info("Trade updated successfully")
             return True
         else:
@@ -193,7 +193,7 @@ def update_positions(trade_result: Dict) -> bool:
             headers=HEADERS,
             json=trade_result
         )
-        if response.status_code == 200:
+        if response.status_code in [200, 201]:
             logger.info("Position updated successfully")
             return True
         else:
@@ -222,7 +222,7 @@ def update_equity(trade_result: Dict) -> bool:
             headers=HEADERS,
             json=trade_result
         )
-        if response.status_code == 200:
+        if response.status_code in [200, 201]:
             logger.info("Equity updated successfully")
             return True
         else:
@@ -262,7 +262,7 @@ def update_signals(signal_data: Dict) -> bool:
             headers=HEADERS,
             json=signal_data
         )
-        if response.status_code == 200:
+        if response.status_code in [200, 201]:
             logger.info("Signal stored successfully")
             return True
         else:

@@ -114,11 +114,11 @@ def run_trading_cycle(symbol: str = "AAPL"):
             return
 
         # Store signals to database
-        current_price = data['close'].iloc[-1] if not data.empty else 100.0
+        current_price = float(data['close'].iloc[-1]) if not data.empty else 100.0
         signal_data = {
             'symbol': symbol,
             'signal_type': signals.get('side', 'hold'),
-            'strength': signals.get('strength', 0.5),  # Now comes from signal generation
+            'strength': float(signals.get('strength', 0.5)),  # Convert numpy types to Python types
             'strategy': 'SMA_RSI',
             'price': current_price
         }
@@ -134,7 +134,9 @@ def run_trading_cycle(symbol: str = "AAPL"):
         current_price = data['close'].iloc[-1] if not data.empty else 100.0
         position_size_data = calculate_position_size(signals, current_equity, open_positions, current_price)
         if not position_size_data:
-            logger.info("No position size calculated")
+            logger.info("No position size calculated - hold signal or no trading opportunity")
+            logger.info("Trading cycle completed successfully (hold)")
+            monitor.record_success()
             return
 
         # Extract the actual position size value
@@ -147,6 +149,8 @@ def run_trading_cycle(symbol: str = "AAPL"):
         if side == 'sell':
             if not existing_position or existing_position.quantity <= 0:
                 logger.warning(f"Cannot SELL {symbol}: No existing position to sell")
+                logger.info("Trading cycle completed successfully (invalid sell prevented)")
+                monitor.record_success()
                 return
             
             if position_size > existing_position.quantity:
@@ -164,12 +168,16 @@ def run_trading_cycle(symbol: str = "AAPL"):
                 available_cash = equity_history[-1].cash
                 if available_cash < required_cash:
                     logger.warning(f"Cannot BUY {position_size} shares: Need ${required_cash:.2f}, only have ${available_cash:.2f}")
+                    logger.info("Trading cycle completed successfully (insufficient funds prevented)")
+                    monitor.record_success()
                     return
         
         # Execute validated trade
         trade_result = execute_trade(position_size, symbol=symbol, side=side, simulate=True)
         if not trade_result:
-            logger.error("Failed to execute trade")
+            error_msg = "Failed to execute trade"
+            logger.error(error_msg)
+            monitor.record_failure(error_msg)
             return
 
         # Update database with trade, positions, and equity
