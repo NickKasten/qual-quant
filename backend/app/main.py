@@ -4,8 +4,11 @@ import argparse
 import sys
 import os
 import signal
+import threading
 from pathlib import Path
 from datetime import datetime, timezone
+from http.server import HTTPServer, BaseHTTPRequestHandler
+import json
 from backend.app.services.fetcher import fetch_ohlcv
 from bot.strategy.signals import generate_signals
 from bot.risk.risk import calculate_position_size
@@ -42,12 +45,92 @@ logger = logging.getLogger(__name__)
 # Global flag for graceful shutdown
 shutdown_flag = False
 
-def signal_handler(signum, frame):
+# Global status for health checks
+bot_status = {
+    'status': 'starting',
+    'cycles_completed': 0,
+    'last_cycle_time': None,
+    'uptime_start': datetime.now(timezone.utc),
+    'market_open': False,
+    'next_cycle_time': None
+}
+
+class HealthCheckHandler(BaseHTTPRequestHandler):
+    """Simple HTTP handler for Render health checks."""
+    
+    def do_GET(self):
+        """Handle GET requests for health checks."""
+        try:
+            if self.path == '/health':
+                # Health check endpoint
+                uptime = datetime.now(timezone.utc) - bot_status['uptime_start']
+                
+                response = {
+                    'status': 'healthy',
+                    'bot_status': bot_status['status'],
+                    'uptime_seconds': int(uptime.total_seconds()),
+                    'cycles_completed': bot_status['cycles_completed'],
+                    'market_open': bot_status['market_open'],
+                    'last_cycle_time': bot_status['last_cycle_time'].isoformat() if bot_status['last_cycle_time'] else None,
+                    'next_cycle_time': bot_status['next_cycle_time'].isoformat() if bot_status['next_cycle_time'] else None
+                }
+                
+                self.send_response(200)
+                self.send_header('Content-Type', 'application/json')
+                self.end_headers()
+                self.wfile.write(json.dumps(response).encode())
+                
+            elif self.path == '/':
+                # Root endpoint
+                self.send_response(200)
+                self.send_header('Content-Type', 'text/plain')
+                self.end_headers()
+                self.wfile.write(b'Trading Bot is running')
+                
+            else:
+                self.send_response(404)
+                self.end_headers()
+                
+        except Exception as e:
+            logger.error(f"Health check error: {e}")
+            self.send_response(500)
+            self.end_headers()
+    
+    def log_message(self, format_str, *args):
+        """Suppress default HTTP logging to avoid log spam."""
+        pass
+
+def start_health_server(port=8080):
+    """Start health check server in background thread."""
+    global health_server
+    try:
+        health_server = HTTPServer(('0.0.0.0', port), HealthCheckHandler)
+        logger.info(f"🌐 Health check server starting on port {port}")
+        health_server.serve_forever()
+    except Exception as e:
+        logger.error(f"Health server error: {e}")
+
+# Global health server instance
+health_server = None
+
+def signal_handler(signum, _frame):
     """Handle shutdown signals from Render."""
-    global shutdown_flag
+    global shutdown_flag, health_server
     logger.info(f"🛑 Received signal {signum} - initiating graceful shutdown")
     print(f"🛑 Received shutdown signal - stopping bot gracefully")
+    
+    # Update status for health checks
+    bot_status['status'] = 'shutting_down'
+    
     shutdown_flag = True
+    
+    # Shutdown health server
+    if health_server:
+        try:
+            health_server.shutdown()
+            logger.info("🌐 Health server stopped")
+        except Exception as e:
+            logger.error(f"Error stopping health server: {e}")
 
 # Register signal handlers for Render deployment
 signal.signal(signal.SIGTERM, signal_handler)
@@ -287,10 +370,19 @@ def main():
         start_time = datetime.now(timezone.utc)
         cycle_count = 0
         
+        # Start health check server in background thread
+        health_port = int(os.environ.get("PORT", "8080"))
+        health_thread = threading.Thread(target=start_health_server, args=(health_port,), daemon=True)
+        health_thread.start()
+        
+        # Update bot status
+        bot_status['status'] = 'running'
+        
         logger.info("=" * 60)
         logger.info("🚀 TRADING BOT BACKGROUND WORKER STARTING")
         logger.info(f"📊 Symbol: {args.symbol}")
         logger.info(f"⏱️  Interval: {args.interval}s ({args.interval//60} minutes)")
+        logger.info(f"🌐 Health check server: port {health_port}")
         logger.info(f"🕐 Started at: {start_time.strftime('%Y-%m-%d %H:%M:%S UTC')}")
         logger.info("=" * 60)
         
@@ -304,6 +396,7 @@ def main():
                 
                 # Check if market is open
                 market_open = is_market_open()
+                bot_status['market_open'] = market_open
                 logger.info(f"🏪 Market status: {'OPEN' if market_open else 'CLOSED'} at {current_time.strftime('%H:%M:%S UTC')}")
                 
                 if not market_open:
@@ -330,6 +423,8 @@ def main():
                 
                 # Market is open - run trading cycle
                 cycle_count += 1
+                bot_status['cycles_completed'] = cycle_count
+                
                 logger.info("=" * 40)
                 logger.info(f"📈 TRADING CYCLE #{cycle_count} STARTING")
                 logger.info(f"📊 Symbol: {args.symbol}")
@@ -340,12 +435,15 @@ def main():
                 
                 run_trading_cycle(args.symbol)
                 
+                bot_status['last_cycle_time'] = current_time
                 logger.info(f"✅ Trading cycle #{cycle_count} completed")
                 print(f"✅ Trading cycle #{cycle_count} completed")
                 
                 # Log next cycle info
                 next_cycle_time = current_time.timestamp() + args.interval
-                next_cycle_str = datetime.fromtimestamp(next_cycle_time, timezone.utc).strftime('%H:%M:%S UTC')
+                next_cycle_datetime = datetime.fromtimestamp(next_cycle_time, timezone.utc)
+                next_cycle_str = next_cycle_datetime.strftime('%H:%M:%S UTC')
+                bot_status['next_cycle_time'] = next_cycle_datetime
                 
                 logger.info(f"⏳ Next cycle #{cycle_count + 1} at {next_cycle_str}")
                 logger.info(f"😴 Sleeping for {args.interval}s ({args.interval//60} minutes)")
