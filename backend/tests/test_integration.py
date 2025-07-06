@@ -96,10 +96,12 @@ class TestIntegration(unittest.TestCase):
         }
 
         # Calculate position size
+        current_price = float(signals['data']['close'].iloc[-1])
         position_size = calculate_position_size(
             signals=signals,
             current_equity=100000,
-            open_positions=0
+            open_positions=0,
+            current_price=current_price
         )
 
         # Verify integration
@@ -166,27 +168,30 @@ class TestIntegration(unittest.TestCase):
         self.assertEqual(signals['side'], 'buy')
 
         # Calculate position size
+        current_price = float(signals['data']['close'].iloc[-1])
         position_size = calculate_position_size(
             signals=signals,
             current_equity=100000,
-            open_positions=0
+            open_positions=0,
+            current_price=current_price
         )
         self.assertIsNotNone(position_size)
 
         # Execute trade
         with patch('backend.app.services.broker.paper.execute_trade') as mock_execute_trade:
             mock_execute_trade.return_value = {
-                'status': 'filled',
+                'status': 'completed',
                 'order_id': 'test123',
-                'filled_avg_price': 120.0,
+                'price': 120.0,
                 'timestamp': datetime.now(UTC).isoformat(),
                 'symbol': self.test_symbol,
                 'side': 'buy',
-                'quantity': position_size['position_size']
+                'quantity': position_size['position_size'],
+                'strategy': 'SMA_RSI'
             }
             trade = execute_trade(position_size['position_size'], symbol=self.test_symbol, side='buy', simulate=True)
             self.assertIsNotNone(trade)
-            self.assertEqual(trade['status'], 'filled')
+            self.assertEqual(trade['status'], 'completed')
 
 if __name__ == '__main__':
     unittest.main() 

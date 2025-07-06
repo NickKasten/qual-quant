@@ -58,7 +58,8 @@ def test_position_sizing():
     data['SMA50'] = data['close'] * 0.9
     data['RSI'] = 50  # Neutral RSI
     signals = generate_signals(data, use_precalculated=True)
-    position = calculate_position_size(signals, 100000, 0)
+    current_price = float(data['close'].iloc[-1])
+    position = calculate_position_size(signals, 100000, 0, current_price)
     assert position is not None
     assert isinstance(position, dict)
     assert 'position_size' in position
@@ -72,7 +73,8 @@ def test_position_sizing_max_positions():
     data['RSI'] = 50
     signals = generate_signals(data, use_precalculated=True)
     # Simulate 3 open positions (max)
-    position = calculate_position_size(signals, 100000, 3)
+    current_price = float(data['close'].iloc[-1])
+    position = calculate_position_size(signals, 100000, 3, current_price)
     assert position is None
 
 def test_position_sizing_stop_loss_and_risk():
@@ -82,7 +84,8 @@ def test_position_sizing_stop_loss_and_risk():
     data['SMA50'] = data['close'] * 0.9
     data['RSI'] = 50
     signals = generate_signals(data, use_precalculated=True)
-    position = calculate_position_size(signals, 100000, 0)
+    current_price = float(data['close'].iloc[-1])
+    position = calculate_position_size(signals, 100000, 0, current_price)
     assert position is not None
     assert abs(position['risk_per_trade'] - 2000) < 1  # 2% of 100,000
     assert abs(position['stop_loss_pct'] - 0.05) < 1e-6  # 5%

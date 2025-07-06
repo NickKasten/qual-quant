@@ -7,25 +7,25 @@ def test_get_status_success(client, mock_supabase, valid_api_key):
     mock_supabase.return_value.table.return_value.select.return_value.limit.return_value.execute.return_value.data = [{"count": 1}]
     mock_supabase.return_value.table.return_value.select.return_value.gte.return_value.execute.return_value.data = [{"count": 1}]
     
-    response = client.get("/api/status", headers={"X-API-Key": valid_api_key})
+    response = client.get("/api/status", headers={"Authorization": f"Bearer {valid_api_key}"})
     
     assert response.status_code == 200
     data = response.json()
-    assert "overall_status" in data
-    assert "components" in data
+    assert "status" in data
     assert "data_delay_minutes" in data
-    assert "last_trade_time" in data
-    assert "last_signal_time" in data
-    assert "last_equity_update" in data
+    assert "last_update" in data
+    assert "system_time" in data
+    assert "version" in data
+    assert "disclaimer" in data
     
     # Check component statuses
-    components = data["components"]
-    assert "database" in components
-    assert "trading_bot" in components
-    assert "data_fetcher" in components
+    status = data["status"]
+    assert "database" in status
+    assert "api" in status
     
     # Verify all components are healthy
-    assert all(c["status"] == "healthy" for c in components.values())
+    assert status["database"] == "healthy"
+    assert status["api"] == "healthy"
 
 def test_get_status_degraded(client, mock_supabase, valid_api_key):
     """Test status retrieval with degraded components."""
@@ -36,7 +36,7 @@ def test_get_status_degraded(client, mock_supabase, valid_api_key):
         [{"count": 1}]   # Data fetcher check
     ]
     
-    response = client.get("/api/status", headers={"X-API-Key": valid_api_key})
+    response = client.get("/api/status", headers={"Authorization": f"Bearer {valid_api_key}"})
     
     assert response.status_code == 200
     data = response.json()
@@ -52,7 +52,7 @@ def test_get_status_down(client, mock_supabase, valid_api_key):
     # Mock all components down
     mock_supabase.return_value.table.return_value.select.return_value.limit.return_value.execute.side_effect = Exception("Database error")
     
-    response = client.get("/api/status", headers={"X-API-Key": valid_api_key})
+    response = client.get("/api/status", headers={"Authorization": f"Bearer {valid_api_key}"})
     
     assert response.status_code == 200
     data = response.json()
@@ -63,15 +63,15 @@ def test_get_status_down(client, mock_supabase, valid_api_key):
 
 def test_get_status_invalid_api_key(client):
     """Test status retrieval with invalid API key."""
-    response = client.get("/api/status", headers={"X-API-Key": "invalid_key"})
-    assert response.status_code == 403
+    response = client.get("/api/status", headers={"Authorization": "Bearer invalid_key"})
+    assert response.status_code == 401
 
 def test_get_status_database_error(client, mock_supabase, valid_api_key):
     """Test status retrieval with database error."""
     # Mock database error
     mock_supabase.return_value.table.return_value.select.return_value.limit.return_value.execute.side_effect = Exception("Database error")
     
-    response = client.get("/api/status", headers={"X-API-Key": valid_api_key})
+    response = client.get("/api/status", headers={"Authorization": f"Bearer {valid_api_key}"})
     
     assert response.status_code == 200  # Status endpoint should handle errors gracefully
     data = response.json()

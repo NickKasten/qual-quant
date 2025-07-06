@@ -6,6 +6,7 @@ from datetime import datetime, timezone
 import sys
 from pathlib import Path
 from dotenv import load_dotenv
+from fastapi.testclient import TestClient
 
 # Load .env file from project root
 load_dotenv(dotenv_path=os.path.join(os.path.dirname(__file__), '../../.env'))
@@ -25,6 +26,7 @@ def setup_test_env():
         'ALPACA_SECRET_KEY': 'test_alpaca_secret',
         'SUPABASE_URL': os.environ.get('SUPABASE_URL', 'test_supabase_url'),
         'SUPABASE_KEY': os.environ.get('SUPABASE_KEY', 'test_supabase_key'),
+        'API_KEY': 'test-api-key',
         'TEST_MODE': 'true',
         'MAX_POSITIONS': '3',
         'RISK_PER_TRADE': '0.02',
@@ -108,14 +110,20 @@ def mock_requests():
 @pytest.fixture
 def mock_supabase():
     """Mock Supabase database operations."""
-    with patch('db.supabase.requests.post') as mock_post, \
-         patch('db.supabase.requests.get') as mock_get:
+    with patch('backend.app.db.supabase.get_supabase_client') as mock_client:
+        # Create a mock client with the expected interface
+        mock_supabase_client = MagicMock()
         
-        # Mock successful responses
-        mock_post.return_value.status_code = 200
-        mock_get.return_value.status_code = 200
+        # Mock the typical Supabase query chain
+        mock_execute = MagicMock()
+        mock_execute.data = [{"count": 1}]
         
-        yield mock_post, mock_get
+        mock_supabase_client.table.return_value.select.return_value.limit.return_value.execute.return_value = mock_execute
+        mock_supabase_client.table.return_value.select.return_value.gte.return_value.execute.return_value = mock_execute
+        
+        mock_client.return_value = mock_supabase_client
+        
+        yield mock_supabase_client
 
 @pytest.fixture
 def sample_ohlcv_data():
@@ -153,4 +161,15 @@ def sample_position_data():
         'current_price': 102.0,
         'unrealized_pnl': 0.0,
         'timestamp': datetime.now(timezone.utc).isoformat()
-    } 
+    }
+
+@pytest.fixture
+def client():
+    """Create a test client for the FastAPI app."""
+    from backend.app.api.main import app
+    return TestClient(app)
+
+@pytest.fixture
+def valid_api_key():
+    """Provide a valid API key for testing."""
+    return "test-api-key" 

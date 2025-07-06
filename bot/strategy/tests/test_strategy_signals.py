@@ -3,7 +3,7 @@ import pandas as pd
 import numpy as np
 from bot.strategy.signals import generate_signals
 
-class TestStrategySignals(unittest.TestCase):
+class TestSignalsStrategy(unittest.TestCase):
     def setUp(self):
         # Create sample data for testing
         self.data = {

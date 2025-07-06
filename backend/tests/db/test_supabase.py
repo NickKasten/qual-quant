@@ -29,27 +29,26 @@ class TestSupabase(unittest.TestCase):
             'symbol': 'AAPL',
             'side': 'buy',
             'quantity': 10,
-            'filled_avg_price': 102.0,
+            'price': 102.0,  # Changed from 'filled_avg_price' to 'price'
             'timestamp': datetime.now(UTC).isoformat(),
-            'status': 'filled'
+            'status': 'completed',  # Changed from 'filled' to 'completed'
+            'strategy': 'SMA_RSI'  # Added required field
         }
 
         self.valid_position = {
             'symbol': 'AAPL',
             'quantity': 10,
-            'filled_avg_price': 102.0,
+            'average_entry_price': 102.0,  # Changed from 'filled_avg_price' to 'average_entry_price'
             'current_price': 102.0,
-            'market_value': 1020.0,
             'unrealized_pnl': 0.0,
-            'realized_pnl': 0.0,
-            'last_updated': datetime.now(UTC).isoformat()
+            'timestamp': datetime.now(UTC).isoformat()  # Changed from 'last_updated' to 'timestamp'
         }
 
         self.valid_equity = {
             'timestamp': datetime.now(UTC).isoformat(),
             'equity': 100000.0,
             'cash': 90000.0,
-            'buying_power': 90000.0
+            'total_value': 100000.0  # Changed from 'buying_power' to 'total_value'
         }
 
     def test_validate_trade_data(self):
