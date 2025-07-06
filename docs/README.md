@@ -145,13 +145,14 @@ docker-compose up -d
 
 #### Manual Start (Main Trading Loop)
 ```bash
-PYTHONPATH=. python backend/app/bot_runner.py
+python -m backend.app.main --symbol AAPL
 ```
 
 #### Automated 5-Minute Trading Cycle (Cron Job)
 - The project includes a `crontab` file that runs the trading loop every 5 minutes:
   ```cron
-  */5 * * * * cd /app && PYTHONPATH=/app python backend/app/bot_runner.py >> /app/logs/cron.log 2>&1
+  # Bot now runs as Render background worker, no cron needed
+  # Previous: */5 * * * * cd /app && PYTHONPATH=/app python backend/app/bot_runner.py >> /app/logs/cron.log 2>&1
   ```
 - You can install this cron job or use Docker Compose for scheduled runs.
 
@@ -397,7 +398,7 @@ Common HTTP status codes:
 - Backend endpoints are in `backend/app/api/endpoints/`.
 - Market data fetcher is in `backend/app/services/fetcher.py`.
 - Risk management logic is in `bot/risk/risk.py`.
-- Main trading loop is in `backend/app/bot_runner.py` (called by cron or manually).
+- Main trading loop is in `backend/app/main.py` (runs as Render background worker).
 - All upserts (positions, equity, signals) require unique constraints in the DB schema (see `backend/app/db/schema.sql`).
 - Trade creation requires a unique, non-null `order_id`.
 
@@ -406,7 +407,7 @@ Common HTTP status codes:
 ```mermaid
 graph TD
     subgraph Core
-        Main[bot_runner.py] --> Config[config.py]
+        Main[main.py] --> Config[config.py]
         Main --> Utils[utils.py]
     end
 
@@ -452,7 +453,7 @@ graph TD
 ## Module Documentation
 
 ### Core Modules
-- `bot_runner.py` - Main trading loop and orchestration
+- `main.py` - Main trading loop and orchestration
   - Runs the 5-minute trading cycle (via cron or manual run)
   - Handles error recovery and logging
   - Integrates data fetch, signal generation, risk management, and trade execution

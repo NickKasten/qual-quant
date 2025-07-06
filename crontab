@@ -1,1 +1,2 @@
-*/5 * * * * cd /app && python backend/app/bot_runner.py >> /app/logs/cron.log 2>&1 
+# Cron job removed - bot now runs as Render background worker via main.py
+# Previous: 5 18 * * 1-5 cd /app && python backend/app/bot_runner.py >> /app/logs/cron.log 2>&1 

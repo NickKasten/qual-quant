@@ -7,7 +7,8 @@ class TestRisk(unittest.TestCase):
         signals = {'signal': 1}
         current_equity = 10000
         open_positions = 0
-        result = calculate_position_size(signals, current_equity, open_positions)
+        current_price = 100  # Add a dummy price
+        result = calculate_position_size(signals, current_equity, open_positions, current_price)
         self.assertIsNotNone(result)
         self.assertIn('position_size', result)
 
@@ -16,7 +17,8 @@ class TestRisk(unittest.TestCase):
         signals = {'signal': 1}
         current_equity = 10000
         open_positions = 3
-        result = calculate_position_size(signals, current_equity, open_positions)
+        current_price = 100  # Add a dummy price
+        result = calculate_position_size(signals, current_equity, open_positions, current_price)
         self.assertIsNone(result)
 
     def test_equity_changes(self):
@@ -24,7 +26,8 @@ class TestRisk(unittest.TestCase):
         signals = {'signal': 1}
         current_equity = 20000
         open_positions = 0
-        result = calculate_position_size(signals, current_equity, open_positions)
+        current_price = 100  # Add a dummy price
+        result = calculate_position_size(signals, current_equity, open_positions, current_price)
         self.assertIsNotNone(result)
         self.assertIn('position_size', result)
 
