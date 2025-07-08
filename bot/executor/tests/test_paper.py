@@ -23,7 +23,7 @@ class TestPaperTrading(unittest.TestCase):
         os.environ['ALPACA_API_KEY'] = 'test_api_key'
         os.environ['ALPACA_SECRET_KEY'] = 'test_secret_key'
         importlib.reload(paper)
-        self.test_symbol = "AAPL"
+        self.test_symbols = ["AAPL", "MSFT", "JNJ", "UNH", "V"]
         self.test_side = "buy"
         self.test_position_size = 10
 
@@ -48,23 +48,21 @@ class TestPaperTrading(unittest.TestCase):
         self.assertEqual(msg, "Missing API credentials")
 
     def test_validate_order_inputs(self):
-        # Test valid inputs
-        is_valid, msg = validate_order_inputs(self.test_position_size, self.test_symbol, self.test_side)
-        self.assertTrue(is_valid)
-        self.assertEqual(msg, "")
-
+        # Test valid inputs for all symbols
+        for symbol in self.test_symbols:
+            is_valid, msg = validate_order_inputs(self.test_position_size, symbol, self.test_side)
+            self.assertTrue(is_valid)
+            self.assertEqual(msg, "")
         # Test invalid position size
-        is_valid, msg = validate_order_inputs(0, self.test_symbol, self.test_side)
+        is_valid, msg = validate_order_inputs(0, self.test_symbols[0], self.test_side)
         self.assertFalse(is_valid)
         self.assertEqual(msg, "Position size must be a positive integer")
-
         # Test invalid symbol
         is_valid, msg = validate_order_inputs(self.test_position_size, "", self.test_side)
         self.assertFalse(is_valid)
         self.assertEqual(msg, "Invalid symbol")
-
         # Test invalid side
-        is_valid, msg = validate_order_inputs(self.test_position_size, self.test_symbol, "invalid")
+        is_valid, msg = validate_order_inputs(self.test_position_size, self.test_symbols[0], "invalid")
         self.assertFalse(is_valid)
         self.assertEqual(msg, "Invalid order side. Must be 'buy' or 'sell'")
 
@@ -78,11 +76,12 @@ class TestPaperTrading(unittest.TestCase):
             'filled_avg_price': '101.23',
             'created_at': '2024-03-20T10:00:00Z'
         }
-        result = execute_trade(self.test_position_size, symbol=self.test_symbol, side=self.test_side, simulate=False)
-        self.assertIsNotNone(result)
-        self.assertEqual(result['symbol'], self.test_symbol)
-        self.assertEqual(result['side'], self.test_side)
-        self.assertEqual(result['quantity'], self.test_position_size)
+        for symbol in self.test_symbols:
+            result = execute_trade(self.test_position_size, symbol=symbol, side=self.test_side, simulate=False)
+            self.assertIsNotNone(result)
+            self.assertEqual(result['symbol'], symbol)
+            self.assertEqual(result['side'], self.test_side)
+            self.assertEqual(result['quantity'], self.test_position_size)
 
     # @patch('backend.app.services.broker.paper.requests.post')
     # def test_execute_trade_api_error(self, mock_post):
@@ -119,19 +118,20 @@ class TestPaperTrading(unittest.TestCase):
 
     def test_simulated_trade_execution_and_tracking(self):
         clear_trade_log()
-        trade = execute_trade(self.test_position_size, symbol=self.test_symbol, side=self.test_side, simulate=True)
-        self.assertIsNotNone(trade)
-        self.assertEqual(trade['symbol'], self.test_symbol)
-        self.assertEqual(trade['side'], self.test_side)
-        self.assertEqual(trade['quantity'], self.test_position_size)
-        self.assertTrue(trade['simulated'])
-        # Trade log should contain this trade
-        log = get_trade_log()
-        self.assertEqual(len(log), 1)
-        self.assertEqual(log[0]['order_id'], trade['order_id'])
-        # Clear log and check
-        clear_trade_log()
-        self.assertEqual(get_trade_log(), [])
+        for symbol in self.test_symbols:
+            trade = execute_trade(self.test_position_size, symbol=symbol, side=self.test_side, simulate=True)
+            self.assertIsNotNone(trade)
+            self.assertEqual(trade['symbol'], symbol)
+            self.assertEqual(trade['side'], self.test_side)
+            self.assertEqual(trade['quantity'], self.test_position_size)
+            self.assertTrue(trade['simulated'])
+            # Trade log should contain this trade
+            log = get_trade_log()
+            self.assertEqual(len(log), 1)
+            self.assertEqual(log[0]['order_id'], trade['order_id'])
+            # Clear log and check
+            clear_trade_log()
+            self.assertEqual(get_trade_log(), [])
 
 if __name__ == "__main__":
     unittest.main() 

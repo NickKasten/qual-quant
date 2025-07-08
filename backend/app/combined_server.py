@@ -43,10 +43,11 @@ logger = logging.getLogger(__name__)
 class BackgroundBot:
     """Background trading bot that runs in a separate thread."""
     
-    def __init__(self, interval_seconds=300):  # 5 minutes default
+    def __init__(self, interval_seconds=300, symbols=None):  # 5 minutes default
         self.interval_seconds = interval_seconds
         self.running = False
         self.thread = None
+        self.symbols = symbols or ["AAPL", "MSFT", "JNJ", "UNH", "V"]
         
     def start(self):
         """Start the background bot in a separate thread."""
@@ -112,11 +113,15 @@ class BackgroundBot:
                     continue
                 
                 # Market is open - run trading cycle
-                logger.info("Market is open - running trading cycle...")
-                print("Market is open - running trading cycle...")
-                run_trading_cycle("AAPL")  # Default symbol
-                logger.info(f"Trading cycle completed, sleeping for {self.interval_seconds}s")
-                print(f"Trading cycle completed, sleeping for {self.interval_seconds}s")
+                if is_market_open():
+                    logger.info("Market is open - running trading cycle for all symbols...")
+                    print("Market is open - running trading cycle for all symbols...")
+                    for symbol in self.symbols:
+                        logger.info(f"Running trading cycle for {symbol}")
+                        print(f"Running trading cycle for {symbol}")
+                        run_trading_cycle(symbol)
+                    logger.info(f"Trading cycles completed, sleeping for {self.interval_seconds}s")
+                    print(f"Trading cycles completed, sleeping for {self.interval_seconds}s")
                 
                 # Sleep with interruption check
                 for _ in range(self.interval_seconds):

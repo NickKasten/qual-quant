@@ -26,8 +26,8 @@ async def get_portfolio(request: Request, authenticated: bool = Depends(verify_a
         equity_response = supabase.table("equity").select("*").order("timestamp.desc").limit(1).execute()
         current_equity = equity_response.data[0] if equity_response.data else {"equity": 0, "timestamp": None}
         
-        # Calculate total P/L
-        total_pl = sum(float(pos.get("unrealized_pl", 0)) for pos in positions)
+        # Calculate total P/L (fix field name to match database schema)
+        total_pl = sum(float(pos.get("unrealized_pnl", 0)) for pos in positions)
         
         return {
             "positions": positions,

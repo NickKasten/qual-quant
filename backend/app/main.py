@@ -360,7 +360,7 @@ def main():
     setup_application()
     
     parser = argparse.ArgumentParser(description="AI Trading Bot Main Loop")
-    parser.add_argument('--symbol', type=str, default=os.environ.get("TRADING_SYMBOL", "AAPL"), help="Ticker symbol to trade")
+    parser.add_argument('--symbols', type=str, default=os.environ.get("TRADING_SYMBOLS", "AAPL,MSFT,JNJ,UNH,V"), help="Comma-separated ticker symbols to trade (default: top 5 Dow Jones)")
     parser.add_argument('--loop', action='store_true', help="Run in infinite loop mode (default: single run)")
     parser.add_argument('--max-loops', type=int, default=None, help="Maximum number of loop iterations (for testing)")
     parser.add_argument('--interval', type=int, default=int(os.environ.get("TRADING_INTERVAL", "300")), help="Interval between trading cycles in seconds (default: 300)")
@@ -380,20 +380,13 @@ def main():
         
         logger.info("=" * 60)
         logger.info("🚀 TRADING BOT BACKGROUND WORKER STARTING")
-        logger.info(f"📊 Symbol: {args.symbol}")
-        logger.info(f"⏱️  Interval: {args.interval}s ({args.interval//60} minutes)")
-        logger.info(f"🌐 Health check server: port {health_port}")
-        logger.info(f"🕐 Started at: {start_time.strftime('%Y-%m-%d %H:%M:%S UTC')}")
-        logger.info("=" * 60)
-        
-        print("🚀 Trading Bot Background Worker Starting...")
-        print(f"📊 Trading Symbol: {args.symbol}")
-        print(f"⏱️  Check Interval: {args.interval//60} minutes")
-        
+        logger.info(f"\ud83d\udcca Symbols: {args.symbols}")
+        print(f"\ud83d\udcca Trading Symbols: {args.symbols}")
+        symbols = [s.strip().upper() for s in args.symbols.split(',') if s.strip()]
         while not shutdown_flag:
             try:
                 current_time = datetime.now(timezone.utc)
-                
+            
                 # Check if market is open
                 market_open = is_market_open()
                 bot_status['market_open'] = market_open
@@ -433,7 +426,10 @@ def main():
                 
                 print(f"📈 Running trading cycle #{cycle_count} for {args.symbol}")
                 
-                run_trading_cycle(args.symbol)
+                for symbol in symbols:
+                    logger.info(f"\ud83d\udcc8 Running trading cycle #{cycle_count} for {symbol}")
+                    print(f"\ud83d\udcc8 Running trading cycle #{cycle_count} for {symbol}")
+                    run_trading_cycle(symbol)
                 
                 bot_status['last_cycle_time'] = current_time
                 logger.info(f"✅ Trading cycle #{cycle_count} completed")
@@ -471,7 +467,7 @@ def main():
                 logger.info("⏳ Waiting 60 seconds before retry...")
                 print("⏳ Waiting 60 seconds before retry...")
                 time.sleep(60)
-        
+            
         # Log final stats
         runtime = datetime.now(timezone.utc) - start_time
         logger.info("=" * 60)
@@ -482,7 +478,9 @@ def main():
         print(f"🏁 Bot shutdown - Ran for {runtime}, completed {cycle_count} cycles")
         
     else:
-        run_trading_cycle(args.symbol)
+        symbols = [s.strip().upper() for s in args.symbols.split(',') if s.strip()]
+        for symbol in symbols:
+            run_trading_cycle(symbol)
 
 if __name__ == "__main__":
     main() 

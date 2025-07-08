@@ -2,6 +2,8 @@ import unittest
 from unittest.mock import patch, MagicMock
 from backend.app.main import run_trading_cycle, main
 
+TOP5_DOW = ["AAPL", "MSFT", "JNJ", "UNH", "V"]
+
 class TestMain(unittest.TestCase):
     @patch('backend.app.main.load_config')
     @patch('backend.app.main.fetch_ohlcv')
@@ -17,7 +19,8 @@ class TestMain(unittest.TestCase):
         mock_generate_signals.return_value = {'signal': 'buy', 'side': 'buy'}
         mock_calculate_position_size.return_value = {'size': 10}
         mock_execute_trade.return_value = {'trade': 'success'}
-        run_trading_cycle(symbol="AAPL")
+        for symbol in TOP5_DOW:
+            run_trading_cycle(symbol=symbol)
         mock_update_trades.assert_called_once()
         mock_update_positions.assert_called_once()
         mock_update_equity.assert_called_once()
@@ -30,7 +33,8 @@ class TestMain(unittest.TestCase):
     def test_run_trading_cycle_fetch_failure(self, mock_update_equity, mock_update_positions, mock_update_trades, mock_fetch_ohlcv, mock_load_config):
         mock_load_config.return_value = {'TIINGO_API_KEY': 'test-key', 'SUPABASE_URL': 'test-url', 'SUPABASE_KEY': 'test-key'}
         mock_fetch_ohlcv.return_value = None
-        run_trading_cycle(symbol="AAPL")
+        for symbol in TOP5_DOW:
+            run_trading_cycle(symbol=symbol)
         # Verify no updates were made
         self.assertFalse(mock_update_trades.called)
         self.assertFalse(mock_update_positions.called)
