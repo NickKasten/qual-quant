@@ -381,7 +381,7 @@ def main():
         logger.info("=" * 60)
         logger.info("🚀 TRADING BOT BACKGROUND WORKER STARTING")
         logger.info(f"\ud83d\udcca Symbols: {args.symbols}")
-        print(f"\ud83d\udcca Trading Symbols: {args.symbols}")
+        print(f"Trading Symbols: {args.symbols}")
         symbols = [s.strip().upper() for s in args.symbols.split(',') if s.strip()]
         while not shutdown_flag:
             try:
@@ -398,14 +398,14 @@ def main():
                     minutes_until_open = (time_until_open % 3600) // 60
                     
                     logger.info(f"🕐 Market closed - Next open in {hours_until_open}h {minutes_until_open}m")
-                    print(f"🕐 Market closed - Next open in {hours_until_open}h {minutes_until_open}m")
+                    print(f"Market closed - Next open in {hours_until_open}h {minutes_until_open}m")
                     
                     # Sleep for 30 minutes when market is closed (to avoid frequent checks)
                     sleep_time = min(1800, time_until_open)  # 30 minutes or time until open
                     sleep_minutes = sleep_time // 60
                     
                     logger.info(f"😴 Sleeping for {sleep_minutes} minutes while market is closed")
-                    print(f"😴 Sleeping for {sleep_minutes} minutes while market is closed")
+                    print(f"Sleeping for {sleep_minutes} minutes while market is closed")
                     
                     # Interruptible sleep for market closed period
                     for _ in range(sleep_time):
@@ -420,20 +420,20 @@ def main():
                 
                 logger.info("=" * 40)
                 logger.info(f"📈 TRADING CYCLE #{cycle_count} STARTING")
-                logger.info(f"📊 Symbol: {args.symbol}")
+                logger.info(f"📊 Symbols: {args.symbols}")
                 logger.info(f"🕐 Time: {current_time.strftime('%H:%M:%S UTC')}")
                 logger.info("=" * 40)
                 
-                print(f"📈 Running trading cycle #{cycle_count} for {args.symbol}")
+                print(f"Running trading cycle #{cycle_count}")
                 
                 for symbol in symbols:
                     logger.info(f"\ud83d\udcc8 Running trading cycle #{cycle_count} for {symbol}")
-                    print(f"\ud83d\udcc8 Running trading cycle #{cycle_count} for {symbol}")
+                    print(f"Running trading cycle #{cycle_count} for {symbol}")
                     run_trading_cycle(symbol)
                 
                 bot_status['last_cycle_time'] = current_time
                 logger.info(f"✅ Trading cycle #{cycle_count} completed")
-                print(f"✅ Trading cycle #{cycle_count} completed")
+                print(f"Trading cycle #{cycle_count} completed")
                 
                 # Log next cycle info
                 next_cycle_time = current_time.timestamp() + args.interval
@@ -443,7 +443,7 @@ def main():
                 
                 logger.info(f"⏳ Next cycle #{cycle_count + 1} at {next_cycle_str}")
                 logger.info(f"😴 Sleeping for {args.interval}s ({args.interval//60} minutes)")
-                print(f"⏳ Next cycle in {args.interval//60} minutes at {next_cycle_str}")
+                print(f"Next cycle in {args.interval//60} minutes at {next_cycle_str}")
                 
                 if args.max_loops is not None and cycle_count >= args.max_loops:
                     logger.info(f"🏁 Reached max loops limit: {args.max_loops}")
@@ -457,15 +457,15 @@ def main():
                 
             except KeyboardInterrupt:
                 logger.info("⌨️  Keyboard interrupt received - shutting down bot")
-                print("⌨️  Keyboard interrupt received - shutting down bot")
+                print("Keyboard interrupt received - shutting down bot")
                 break
             except Exception as e:
                 logger.error(f"❌ Error in bot loop: {e}", exc_info=True)
-                print(f"❌ Error in bot loop: {e}")
+                print(f"Error in bot loop: {e}")
                 
                 # Wait 1 minute before retrying on error
                 logger.info("⏳ Waiting 60 seconds before retry...")
-                print("⏳ Waiting 60 seconds before retry...")
+                print("Waiting 60 seconds before retry...")
                 time.sleep(60)
             
         # Log final stats
@@ -475,7 +475,7 @@ def main():
         logger.info(f"📈 Total runtime: {runtime}")
         logger.info(f"🔄 Total cycles completed: {cycle_count}")
         logger.info("=" * 60)
-        print(f"🏁 Bot shutdown - Ran for {runtime}, completed {cycle_count} cycles")
+        print(f"Bot shutdown - Ran for {runtime}, completed {cycle_count} cycles")
         
     else:
         symbols = [s.strip().upper() for s in args.symbols.split(',') if s.strip()]

@@ -34,3 +34,6 @@ httpx==0.23.3
 
 # Added tenacity
 tenacity
+
+# Yahoo Finance fallback
+yfinance
