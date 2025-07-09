@@ -3,7 +3,7 @@ from slowapi import Limiter
 from slowapi.util import get_remote_address
 from typing import Dict, Any, List, Optional
 from ...db.supabase import get_supabase_client
-from datetime import datetime, timedelta, UTC
+from datetime import datetime, timedelta, timezone
 from ...core.config import LEGAL_DISCLAIMER
 from ...utils.auth import verify_api_key
 
@@ -20,7 +20,7 @@ async def get_performance(request: Request, days: int = Query(30, ge=1, le=365, 
         supabase = get_supabase_client()
         
         # Calculate start date
-        start_date = datetime.now(UTC) - timedelta(days=days)
+        start_date = datetime.now(timezone.utc) - timedelta(days=days)
         
         # Fetch equity data
         equity_response = (

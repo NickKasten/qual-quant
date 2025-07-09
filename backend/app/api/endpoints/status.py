@@ -3,7 +3,7 @@ from slowapi import Limiter
 from slowapi.util import get_remote_address
 from typing import Dict, Any
 from ...db.supabase import get_supabase_client
-from datetime import datetime, timedelta, UTC
+from datetime import datetime, timedelta, timezone
 from ...core.config import LEGAL_DISCLAIMER
 from ...utils.auth import verify_api_key
 
@@ -39,7 +39,7 @@ async def get_status(request: Request, authenticated: bool = Depends(verify_api_
         
         # Calculate data delay
         if latest_timestamp:
-            delay = datetime.now(UTC) - datetime.fromisoformat(latest_timestamp)
+            delay = datetime.now(timezone.utc) - datetime.fromisoformat(latest_timestamp)
             delay_minutes = int(delay.total_seconds() / 60)
         else:
             delay_minutes = None
@@ -51,7 +51,7 @@ async def get_status(request: Request, authenticated: bool = Depends(verify_api_
             },
             "data_delay_minutes": delay_minutes,
             "last_update": latest_timestamp,
-            "system_time": datetime.now(UTC).isoformat(),
+            "system_time": datetime.now(timezone.utc).isoformat(),
             "version": "1.0.0",
             "disclaimer": LEGAL_DISCLAIMER
         }

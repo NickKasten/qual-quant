@@ -20,14 +20,33 @@ async def get_portfolio(request: Request, authenticated: bool = Depends(verify_a
         
         # Fetch current positions
         positions_response = supabase.table("positions").select("*").execute()
-        positions = positions_response.data if positions_response.data else []
+        raw_positions = positions_response.data if positions_response.data else []
+        
+        # Transform positions to match frontend expectations
+        positions = []
+        for pos in raw_positions:
+            quantity = float(pos.get("quantity", 0))
+            current_price = float(pos.get("current_price", 0))
+            avg_price = float(pos.get("average_entry_price", 0))
+            unrealized_pnl = float(pos.get("unrealized_pnl", 0))
+            
+            transformed_position = {
+                "symbol": pos.get("symbol", ""),
+                "quantity": quantity,
+                "avg_price": avg_price,
+                "current_price": current_price,
+                "market_value": quantity * current_price,
+                "unrealized_pl": unrealized_pnl,
+                "timestamp": pos.get("timestamp")
+            }
+            positions.append(transformed_position)
         
         # Fetch current equity
         equity_response = supabase.table("equity").select("*").order("timestamp.desc").limit(1).execute()
         current_equity = equity_response.data[0] if equity_response.data else {"equity": 0, "timestamp": None}
         
-        # Calculate total P/L (fix field name to match database schema)
-        total_pl = sum(float(pos.get("unrealized_pnl", 0)) for pos in positions)
+        # Calculate total P/L using transformed data
+        total_pl = sum(pos["unrealized_pl"] for pos in positions)
         
         return {
             "positions": positions,

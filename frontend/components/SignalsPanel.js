@@ -321,7 +321,7 @@ export default function SignalsPanel() {
                   <h5 className="text-sm font-medium text-amber-900 mb-2">What's Coming Next?</h5>
                   <p className="text-sm text-amber-800">
                     Signals will appear here when our AI detects trading opportunities using the SMA crossover + RSI strategy. 
-                    The system analyzes market data every 5 minutes during trading hours, so check back soon!
+                    The system analyzes market data hourly but only executes trades once per day during trading hours.
                   </p>
                 </div>
               </div>

@@ -362,7 +362,7 @@ export default function TradeFeed() {
                       <h5 className="text-sm font-medium text-blue-900">Pro Tip</h5>
                       <p className="text-sm text-blue-800 mt-1">
                         Trades appear here when market conditions trigger our SMA crossover + RSI strategy. 
-                        The bot runs every 5 minutes during market hours (9:30 AM - 4:00 PM ET).
+                        The bot analyzes markets hourly, but only trades once per day per symbol during market hours (9:30 AM - 4:00 PM ET).
                       </p>
                     </div>
                   </div>
@@ -371,7 +371,7 @@ export default function TradeFeed() {
             )}
             
             <div className="mt-8 flex justify-center space-x-4 text-sm text-gray-400">
-              <span>🕘 Checking every 5 minutes</span>
+              <span>🕘 Daily trading analysis</span>
               <span>•</span>
               <span>📈 SMA + RSI Strategy</span>
               <span>•</span>
