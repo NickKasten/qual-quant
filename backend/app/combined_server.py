@@ -43,7 +43,7 @@ logger = logging.getLogger(__name__)
 class BackgroundBot:
     """Background trading bot that runs in a separate thread."""
     
-    def __init__(self, interval_seconds=300, symbols=None):  # 5 minutes default
+    def __init__(self, interval_seconds=3600, symbols=None):  # 5 minutes default
         self.interval_seconds = interval_seconds
         self.running = False
         self.thread = None

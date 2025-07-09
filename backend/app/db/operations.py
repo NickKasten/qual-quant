@@ -35,6 +35,20 @@ class DatabaseOperations:
         result = query.order('timestamp', desc=True).range(offset, offset+limit-1).execute()
         return [Trade(**trade) for trade in result.data]
 
+    def get_recent_trades(self, symbol: str, days: int = 1) -> List[Trade]:
+        """Get recent trades for a symbol within the last N days."""
+        from datetime import datetime, timedelta
+        cutoff_time = datetime.now() - timedelta(days=days)
+        
+        query = (
+            self.client.table('trades')
+            .select('*')
+            .eq('symbol', symbol)
+            .gte('timestamp', cutoff_time.isoformat())
+        )
+        result = query.order('timestamp', desc=True).execute()
+        return [Trade(**trade) for trade in result.data]
+
     def update_position(self, position: Position) -> Position:
         """Update or create a position using upsert."""
         data = to_serializable(position.model_dump(exclude={'id'}))

@@ -2,7 +2,7 @@ import os
 import logging
 import requests
 from typing import Dict, Optional, Tuple
-from datetime import datetime, UTC
+from datetime import datetime, timezone
 import random
 
 logger = logging.getLogger(__name__)
@@ -105,7 +105,7 @@ def execute_trade(position_size: int, symbol: str = "AAPL", side: str = "buy", s
             'status': 'completed',
             'order_id': f'sim-{random.randint(100000, 999999)}',
             'price': fill_price,  # Fixed: changed from filled_avg_price to price
-            'timestamp': datetime.now(UTC).isoformat(),
+            'timestamp': datetime.now(timezone.utc).isoformat(),
             'strategy': 'SMA_RSI',  # Added: required field for database
             'simulated': True
         }
@@ -119,7 +119,7 @@ def execute_trade(position_size: int, symbol: str = "AAPL", side: str = "buy", s
         "side": side,
         "type": "market",
         "time_in_force": "day",
-        "timestamp": datetime.now(UTC).isoformat()
+        "timestamp": datetime.now(timezone.utc).isoformat()
     }
 
     try:

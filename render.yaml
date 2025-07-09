@@ -65,6 +65,6 @@ services:
       - key: TRADING_SYMBOL
         value: "AAPL"
       - key: TRADING_INTERVAL
-        value: "300"
+        value: "3600"
       - key: API_KEY
         sync: false

@@ -55,6 +55,7 @@ CREATE TABLE IF NOT EXISTS signals (
 -- Create indexes
 CREATE INDEX IF NOT EXISTS idx_trades_symbol ON trades(symbol);
 CREATE INDEX IF NOT EXISTS idx_trades_timestamp ON trades(timestamp);
+CREATE INDEX IF NOT EXISTS idx_trades_symbol_timestamp ON trades(symbol, timestamp);
 CREATE INDEX IF NOT EXISTS idx_positions_symbol ON positions(symbol);
 CREATE INDEX IF NOT EXISTS idx_equity_timestamp ON equity(timestamp);
 CREATE INDEX IF NOT EXISTS idx_signals_symbol ON signals(symbol);
