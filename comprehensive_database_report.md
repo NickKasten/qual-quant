@@ -1,4 +1,4 @@
-# Vibe Trading Database State Report
+# QualQuant Database State Report
 
 **Generated:** June 26, 2025 at 01:16 AM PST  
 **Report by:** Database State Checker

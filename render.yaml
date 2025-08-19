@@ -1,7 +1,7 @@
 services:
   # API Web Service
   - type: web
-    name: vibe-trading-api
+    name: qualquant-api
     env: docker
     plan: starter
     dockerfilePath: ./Dockerfile.api
@@ -35,7 +35,7 @@ services:
 
   # Trading Bot Background Worker
   - type: worker
-    name: vibe-trading-bot
+    name: qualquant-bot
     env: docker
     plan: starter
     dockerfilePath: ./Dockerfile.bot

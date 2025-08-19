@@ -1,4 +1,4 @@
-# Vibe-Trading: AI Trading Bot & Live Dashboard
+# QualQuant: AI Trading Bot & Live Dashboard
 **TOTAL HARD-RESETS: 2**
 
 ## Project Overview
@@ -116,8 +116,8 @@ API_KEY=your_secure_api_key_for_endpoints
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/yourusername/vibe-trading.git
-cd vibe-trading
+git clone https://github.com/yourusername/qualquant.git
+cd qualquant
 ```
 
 2. Create and activate a virtual environment:
@@ -186,7 +186,7 @@ SUPABASE_URL=your_supabase_url SUPABASE_KEY=your_supabase_key pytest backend/tes
 The backend provides a secure RESTful API for accessing trading data. Protected endpoints require API key authentication via Bearer token. All endpoints include rate limiting (30 requests/minute) and legal disclaimers.
 
 ### Base URL
-- **Production**: `https://vibe-trading.onrender.com`
+- **Production**: `https://qualquant.onrender.com`
 - **Local Development**: `http://localhost:8000`
 
 ### Authentication
@@ -196,7 +196,7 @@ Protected endpoints require API key authentication using Bearer tokens:
 ```bash
 # Include API key in Authorization header
 curl -H "Authorization: Bearer YOUR_API_KEY" \
-     https://vibe-trading.onrender.com/api/portfolio
+     https://qualquant.onrender.com/api/portfolio
 ```
 
 **Authentication Responses:**

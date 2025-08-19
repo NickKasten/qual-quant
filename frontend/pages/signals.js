@@ -5,7 +5,7 @@ export default function Signals() {
   return (
     <>
       <Head>
-        <title>Trading Signals - Vibe Trading</title>
+        <title>Trading Signals - QualQuant</title>
         <meta name="description" content="Current trading signals and technical indicators from the AI trading strategy" />
       </Head>
 

@@ -10,7 +10,7 @@ export default function App({ Component, pageProps }) {
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex justify-between items-center py-6">
               <div className="flex items-center">
-                <h1 className="text-3xl font-bold text-primary-900">Vibe Trading</h1>
+                <h1 className="text-3xl font-bold text-primary-900">QualQuant</h1>
                 <span className="ml-3 text-sm text-primary-600 bg-primary-100 px-2 py-1 rounded">AI Bot Dashboard</span>
               </div>
               <nav className="flex space-x-8">

@@ -5,7 +5,7 @@ export default function Trades() {
   return (
     <>
       <Head>
-        <title>Trade History - Vibe Trading</title>
+        <title>Trade History - QualQuant</title>
         <meta name="description" content="Complete trading history and transaction log from the AI trading bot" />
       </Head>
 

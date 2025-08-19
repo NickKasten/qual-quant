@@ -1,7 +1,7 @@
 # Unit Test Debug Plan
 
 ## Overview
-This document outlines the step-by-step plan to fix all failing unit tests in the vibe-trading project, with a focus on ensuring the core functionality described in PRD.md works correctly.
+This document outlines the step-by-step plan to fix all failing unit tests in the qualquant project, with a focus on ensuring the core functionality described in PRD.md works correctly.
 
 ## Current Status
 - 49 tests passing

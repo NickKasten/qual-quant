@@ -1,4 +1,4 @@
-vibe-trading/
+qualquant/
 │
 ├── backend/                  # FastAPI application
 │   ├── app/

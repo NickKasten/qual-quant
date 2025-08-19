@@ -6,7 +6,7 @@ export default function Dashboard() {
   return (
     <>
       <Head>
-        <title>Vibe Trading - AI Bot Dashboard</title>
+        <title>QualQuant - AI Bot Dashboard</title>
         <meta name="description" content="Live AI trading bot dashboard showing portfolio performance, trades, and signals" />
         <link rel="icon" href="/favicon.ico" />
       </Head>

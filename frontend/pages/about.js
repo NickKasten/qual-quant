@@ -4,7 +4,7 @@ export default function About() {
   return (
     <>
       <Head>
-        <title>About - Vibe Trading Strategy</title>
+        <title>About - QualQuant Strategy</title>
         <meta name="description" content="Learn about the AI trading strategy, methodology, and risk management" />
       </Head>
 
