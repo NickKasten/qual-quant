@@ -1,19 +1,18 @@
-const API_BASE_URL = process.env.API_BASE_URL || 'http://localhost:8000';
-const API_KEY = process.env.API_KEY || '';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || '';
 
 class ApiClient {
   constructor() {
-    this.baseURL = API_BASE_URL;
-    this.headers = {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${API_KEY}`
-    };
+    this.baseURL = API_BASE_URL.replace(/\/$/, '');
   }
 
   async request(endpoint, options = {}) {
-    const url = `${this.baseURL}${endpoint}`;
+    const base = this.baseURL || '';
+    const url = `${base}${endpoint}`;
     const config = {
-      headers: this.headers,
+      headers: {
+        'Content-Type': 'application/json',
+        ...(options.headers || {})
+      },
       ...options
     };
 
@@ -47,7 +46,7 @@ class ApiClient {
   }
 
   async getPortfolio() {
-    return this.request('/api/portfolio');
+    return this.request('/api/proxy/portfolio');
   }
 
   async getTrades(page = 1, pageSize = 20, symbol = null) {
@@ -60,19 +59,19 @@ class ApiClient {
       params.append('symbol', symbol);
     }
     
-    return this.request(`/api/trades?${params}`);
+    return this.request(`/api/proxy/trades?${params}`);
   }
 
   async getPerformance(days = 30) {
-    return this.request(`/api/performance?days=${days}`);
+    return this.request(`/api/proxy/performance?days=${days}`);
   }
 
   async getSignals() {
-    return this.request('/api/signals');
+    return this.request('/api/proxy/signals');
   }
 
   async getStatus() {
-    return this.request('/api/status');
+    return this.request('/api/proxy/status');
   }
 }
 

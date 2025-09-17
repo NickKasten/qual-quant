@@ -31,7 +31,11 @@ export default function PortfolioSummary() {
   };
 
   const formatPercent = (value) => {
-    const percent = (value / portfolio?.current_equity * 100) || 0;
+    const equity = portfolio?.current_equity || 0;
+    if (!equity) {
+      return '0.00%';
+    }
+    const percent = (value / equity) * 100;
     return `${percent >= 0 ? '+' : ''}${percent.toFixed(2)}%`;
   };
 
@@ -56,46 +60,23 @@ export default function PortfolioSummary() {
     return (
       <div className="bg-white overflow-hidden shadow rounded-lg">
         <div className="p-6">
-          <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center justify-between mb-4">
             <h3 className="text-lg leading-6 font-medium text-gray-900">Portfolio Summary</h3>
-            <button 
+            <button
               onClick={fetchPortfolio}
-              className="text-sm text-blue-600 hover:text-blue-800 flex items-center"
+              className="text-sm text-primary-600 hover:text-primary-800"
             >
-              <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-              </svg>
               Retry
             </button>
           </div>
-          
-          <div className="text-center py-8">
-            <div className="flex justify-center mb-4">
-              <svg className="w-12 h-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-              </svg>
-            </div>
-            <h4 className="text-lg font-medium text-gray-900 mb-2">Portfolio Data Unavailable</h4>
-            <p className="text-gray-500 mb-4">Unable to connect to trading backend</p>
-            <div className="text-sm text-red-600 bg-red-50 px-3 py-2 rounded-md inline-block">
-              {error}
-            </div>
-          </div>
 
-          <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-6 opacity-50">
-            <div>
-              <dt className="text-sm font-medium text-gray-500">Current Equity</dt>
-              <dd className="mt-1 text-3xl font-semibold text-gray-400">$--,---</dd>
-            </div>
-            <div>
-              <dt className="text-sm font-medium text-gray-500">Total P/L</dt>
-              <dd className="mt-1 text-3xl font-semibold text-gray-400">$--,---</dd>
-            </div>
-            <div>
-              <dt className="text-sm font-medium text-gray-500">Open Positions</dt>
-              <dd className="mt-1 text-3xl font-semibold text-gray-400">--</dd>
-            </div>
-          </div>
+          <p className="text-sm text-gray-600">
+            We couldn’t retrieve the latest portfolio snapshot. Confirm the trading API is reachable and that the
+            frontend has a valid API key configured.
+          </p>
+          <p className="mt-3 text-xs text-red-600 bg-red-50 rounded px-3 py-2 font-mono break-all">
+            {error}
+          </p>
         </div>
       </div>
     );

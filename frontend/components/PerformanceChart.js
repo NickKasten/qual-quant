@@ -66,40 +66,22 @@ export default function PerformanceChart() {
     return (
       <div className="bg-white overflow-hidden shadow rounded-lg">
         <div className="p-6">
-          <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center justify-between mb-4">
             <h3 className="text-lg leading-6 font-medium text-gray-900">Performance Chart</h3>
-            <button 
+            <button
               onClick={fetchPerformance}
-              className="text-sm text-blue-600 hover:text-blue-800 flex items-center"
+              className="text-sm text-primary-600 hover:text-primary-800"
             >
-              <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-              </svg>
               Retry
             </button>
           </div>
-          
-          <div className="text-center py-12">
-            <div className="flex justify-center mb-4">
-              <svg className="w-12 h-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-              </svg>
-            </div>
-            <h4 className="text-lg font-medium text-gray-900 mb-2">Performance Data Unavailable</h4>
-            <p className="text-gray-500 mb-4">Unable to load performance history</p>
-            <div className="text-sm text-red-600 bg-red-50 px-3 py-2 rounded-md inline-block">
-              {error}
-            </div>
-          </div>
-
-          <div className="h-64 bg-gray-50 rounded flex items-center justify-center">
-            <div className="text-gray-400 text-center">
-              <svg className="w-16 h-16 mx-auto mb-2 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z" />
-              </svg>
-              <p className="text-sm">Chart unavailable</p>
-            </div>
-          </div>
+          <p className="text-sm text-gray-600">
+            Performance history is temporarily unavailable. Verify the API is reachable and that equity records exist
+            for the requested window.
+          </p>
+          <p className="mt-3 text-xs text-red-600 bg-red-50 rounded px-3 py-2 font-mono break-all">
+            {error}
+          </p>
         </div>
       </div>
     );
