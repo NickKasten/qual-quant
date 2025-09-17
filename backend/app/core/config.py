@@ -12,8 +12,6 @@ REQUIRED_ENV_VARS = [
     "SUPABASE_KEY"
 ]
 
-TEST_MODE = os.getenv("TEST_MODE", "false").lower() == "true"
-
 LEGAL_DISCLAIMER = (
     "This service is for informational and educational purposes only. "
     "Nothing herein should be construed as financial advice, a solicitation, or a recommendation to buy or sell any security. "
@@ -21,7 +19,10 @@ LEGAL_DISCLAIMER = (
 )
 
 def load_config():
-    if not TEST_MODE:
+    # Check TEST_MODE at function call time, not import time
+    test_mode = os.getenv("TEST_MODE", "false").lower() == "true"
+    
+    if not test_mode:
         missing = [var for var in REQUIRED_ENV_VARS if not os.getenv(var)]
         if missing:
             raise ConfigError(f"Missing required environment variables: {', '.join(missing)}")
@@ -36,7 +37,7 @@ def load_config():
         "TIINGO_BASE_URL": "https://api.tiingo.com/tiingo/daily",
         "ALPHA_VANTAGE_BASE_URL": "https://www.alphavantage.co/query",
         "ALPACA_BASE_URL": "https://paper-api.alpaca.markets",
-        "TEST_MODE": TEST_MODE,
+        "TEST_MODE": test_mode,
         "STARTING_EQUITY": os.getenv("STARTING_EQUITY", "100000")
     }
 

@@ -30,12 +30,17 @@ env/
 ENV/
 .venv/
 
-# IDE
+# IDE / local tooling
 .idea/
 .vscode/
 *.swp
 *.swo
 .DS_Store
+.claude/
+
+# Node dependencies
+node_modules/
+frontend/node_modules/
 
 # Logs
 *.log
@@ -50,8 +55,9 @@ log/
 *.csv
 *.json
 !package.json
-!package-lock.json
+!/frontend/package-lock.json
 !tsconfig.json
+/package-lock.json
 
 # Cache
 .cache/

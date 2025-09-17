@@ -110,20 +110,41 @@ def mock_requests():
 @pytest.fixture
 def mock_supabase():
     """Mock Supabase database operations."""
-    with patch('backend.app.db.supabase.get_supabase_client') as mock_client:
-        # Create a mock client with the expected interface
+    with patch('app.db.supabase.get_supabase_client') as mock_client:
+        # Create a flexible mock client that handles any query chain
         mock_supabase_client = MagicMock()
         
-        # Mock the typical Supabase query chain
-        mock_execute = MagicMock()
-        mock_execute.data = [{"count": 1}]
+        # Create a flexible mock that returns itself for all methods
+        # This allows any chaining pattern to work
+        flexible_mock = MagicMock()
+        flexible_mock.data = []  # Default empty data
         
-        mock_supabase_client.table.return_value.select.return_value.limit.return_value.execute.return_value = mock_execute
-        mock_supabase_client.table.return_value.select.return_value.gte.return_value.execute.return_value = mock_execute
+        # The flexible mock returns itself for any method call
+        flexible_mock.table.return_value = flexible_mock
+        flexible_mock.select.return_value = flexible_mock
+        flexible_mock.gte.return_value = flexible_mock
+        flexible_mock.lte.return_value = flexible_mock
+        flexible_mock.order.return_value = flexible_mock
+        flexible_mock.limit.return_value = flexible_mock
+        flexible_mock.execute.return_value = flexible_mock
+        flexible_mock.insert.return_value = flexible_mock
+        flexible_mock.upsert.return_value = flexible_mock
+        flexible_mock.update.return_value = flexible_mock
+        flexible_mock.delete.return_value = flexible_mock
+        flexible_mock.eq.return_value = flexible_mock
+        flexible_mock.neq.return_value = flexible_mock
+        flexible_mock.gt.return_value = flexible_mock
+        flexible_mock.lt.return_value = flexible_mock
+        flexible_mock.like.return_value = flexible_mock
+        flexible_mock.ilike.return_value = flexible_mock
+        flexible_mock.is_.return_value = flexible_mock
+        flexible_mock.filter.return_value = flexible_mock
         
+        # Make the client return this flexible mock
+        mock_supabase_client.table.return_value = flexible_mock
         mock_client.return_value = mock_supabase_client
         
-        yield mock_supabase_client
+        yield mock_client
 
 @pytest.fixture
 def sample_ohlcv_data():
@@ -162,6 +183,52 @@ def sample_position_data():
         'unrealized_pnl': 0.0,
         'timestamp': datetime.now(timezone.utc).isoformat()
     }
+
+@pytest.fixture
+def sample_portfolio_data():
+    """Provide sample portfolio data for testing."""
+    return {
+        'positions': [
+            {
+                'symbol': 'AAPL',
+                'quantity': 10,
+                'average_entry_price': 102.0,
+                'current_price': 105.0,
+                'unrealized_pnl': 30.0,
+                'timestamp': datetime.now(timezone.utc).isoformat()
+            }
+        ],
+        'equity': [
+            {
+                'equity': 101000.0,
+                'cash': 90000.0,
+                'total_value': 101000.0,
+                'timestamp': datetime.now(timezone.utc).isoformat()
+            }
+        ]
+    }
+
+@pytest.fixture
+def sample_signals_data():
+    """Provide sample signals data for testing."""
+    return [
+        {
+            'symbol': 'AAPL',
+            'signal': 'BUY',
+            'confidence': 0.75,
+            'timestamp': datetime.now(timezone.utc).isoformat(),
+            'price_target': 110.0,
+            'stop_loss': 95.0
+        },
+        {
+            'symbol': 'MSFT',
+            'signal': 'HOLD',
+            'confidence': 0.60,
+            'timestamp': datetime.now(timezone.utc).isoformat(),
+            'price_target': 300.0,
+            'stop_loss': 250.0
+        }
+    ]
 
 @pytest.fixture
 def client():

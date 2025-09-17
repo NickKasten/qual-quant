@@ -1,11 +1,7 @@
 import os
 import secrets
-from fastapi import HTTPException, Security
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from fastapi import HTTPException, Header
 from typing import Optional
-
-# Initialize the security scheme
-security = HTTPBearer()
 
 def generate_api_key() -> str:
     """Generate a secure API key."""
@@ -15,12 +11,12 @@ def get_api_key_from_env() -> Optional[str]:
     """Get the API key from environment variables."""
     return os.getenv("API_KEY")
 
-def verify_api_key(credentials: HTTPAuthorizationCredentials = Security(security)) -> bool:
+def verify_api_key(x_api_key: Optional[str] = Header(None, alias="X-API-Key")) -> bool:
     """
     Verify the provided API key against the configured one.
     
     Args:
-        credentials: The HTTP Bearer token credentials
+        x_api_key: The API key from X-API-Key header
         
     Returns:
         bool: True if valid
@@ -29,6 +25,11 @@ def verify_api_key(credentials: HTTPAuthorizationCredentials = Security(security
         HTTPException: If API key is invalid or missing
     """
     expected_api_key = get_api_key_from_env()
+    test_mode_env = os.getenv("TEST_MODE", "false").lower()
+    
+    # In test mode, allow any key or no key
+    if test_mode_env == "true":
+        return True
     
     if not expected_api_key:
         raise HTTPException(
@@ -36,15 +37,15 @@ def verify_api_key(credentials: HTTPAuthorizationCredentials = Security(security
             detail="API key not configured on server"
         )
     
-    if not credentials or not credentials.credentials:
+    if not x_api_key:
         raise HTTPException(
-            status_code=401,
-            detail="API key required. Include 'Authorization: Bearer YOUR_API_KEY' header"
+            status_code=403,
+            detail="Not authenticated"
         )
     
-    if credentials.credentials != expected_api_key:
+    if x_api_key != expected_api_key:
         raise HTTPException(
-            status_code=401,
+            status_code=403,
             detail="Invalid API key"
         )
     

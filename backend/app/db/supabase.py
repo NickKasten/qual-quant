@@ -30,9 +30,16 @@ def get_supabase_client() -> Client:
         config = load_config()
         url = config.get("SUPABASE_URL")
         key = config.get("SUPABASE_KEY")
+        test_mode = config.get("TEST_MODE", False)
         
         if not url or not key:
             raise ValueError("SUPABASE_URL and SUPABASE_KEY must be set in environment variables")
+        
+        # In test mode, use mock values that pass Supabase validation
+        if test_mode:
+            # Use realistic test values that pass Supabase's API key validation
+            url = "https://test.supabase.co"
+            key = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRlc3QiLCJyb2xlIjoiYW5vbiIsImlhdCI6MTY0MTQwODAwMCwiZXhwIjoxOTU2OTg0MDAwfQ.test_key"
         
         _supabase_client = create_client(url, key)
     
