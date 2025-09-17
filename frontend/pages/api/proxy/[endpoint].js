@@ -36,7 +36,7 @@ export default async function handler(req, res) {
   };
 
   if (API_KEY) {
-    headers['Authorization'] = `Bearer ${API_KEY}`;
+    headers['X-API-Key'] = API_KEY;
   }
 
   const init = {

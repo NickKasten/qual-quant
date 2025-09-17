@@ -13,7 +13,7 @@ An end-to-end, **transparent sandbox** where an AI trading bot generates simulat
 
 ## Core Features
 - 🤖 AI-powered trading bot using 20/50-day SMA crossover + RSI (70/30) strategy
-- 🔐 Secure REST API with Bearer token authentication
+- 🔐 Secure REST API with X-API-Key header authentication
 - 🕐 Market hours detection (Mon-Fri 9:30AM-4:00PM ET) to avoid unnecessary API calls
 - 📊 Live dashboard with portfolio tracking and equity curve (Coming Soon)
 - 📈 Performance visualization vs. S&P 500 (delayed) (Coming Soon)
@@ -35,7 +35,7 @@ graph TD
     end
     subgraph API [Complete]
         D[Authenticated REST API] -- reads --> B
-        D -- protected by --> I[Bearer Token Auth]
+        D -- protected by --> I[X-API-Key Auth]
     end
     subgraph Frontend [Planned]
         E[Next.js Dashboard] -- requests --> D
@@ -107,7 +107,7 @@ API_KEY=your_secure_api_key_for_endpoints
 
 **Important Notes:**
 - The `API_KEY` must match between backend and frontend
-- Frontend uses `Authorization: Bearer <API_KEY>` header format
+- Frontend proxy sends requests using the `X-API-Key` header
 - For local development, use `http://localhost:8000` for API_BASE_URL
 - For production, update API_BASE_URL to your deployed API service URL
 - Next.js requires environment variables to be in `.env.local` for local development
@@ -193,7 +193,7 @@ SUPABASE_URL=your_supabase_url SUPABASE_KEY=your_supabase_key pytest backend/tes
 
 ## Technical Stack
 - Backend: Python (FastAPI, modular, see backend/app/ and bot/)
-- API: FastAPI with Bearer token authentication (Complete)
+- API: FastAPI with X-API-Key header authentication (Complete)
 - Frontend: Next.js (Planned)
 - Database: Supabase/Postgres
 - Data Sources: Tiingo (primary), Alpha Vantage (backup)
@@ -202,7 +202,7 @@ SUPABASE_URL=your_supabase_url SUPABASE_KEY=your_supabase_key pytest backend/tes
 
 ## API Endpoints
 
-The backend provides a secure RESTful API for accessing trading data. Protected endpoints require API key authentication via Bearer token. All endpoints include rate limiting (30 requests/minute) and legal disclaimers.
+The backend provides a secure RESTful API for accessing trading data. Protected endpoints require API key authentication using the `X-API-Key` header. All endpoints include rate limiting (30 requests/minute) and legal disclaimers.
 
 ### Base URL
 - **Production**: `https://qualquant.onrender.com`
@@ -210,16 +210,16 @@ The backend provides a secure RESTful API for accessing trading data. Protected 
 
 ### Authentication
 
-Protected endpoints require API key authentication using Bearer tokens:
+Protected endpoints require an `X-API-Key` header:
 
 ```bash
-# Include API key in Authorization header
-curl -H "Authorization: Bearer YOUR_API_KEY" \
+# Include API key in X-API-Key header
+curl -H "X-API-Key: YOUR_API_KEY" \
      https://qualquant.onrender.com/api/portfolio
 ```
 
 **Authentication Responses:**
-- `401`: Missing or invalid API key
+- `403`: Missing or invalid API key
 - `429`: Rate limit exceeded
 
 ### System Health Endpoints (Public)
@@ -383,7 +383,7 @@ Latest trading signals and technical indicators.
 
 ### API Features
 
-- **Authentication**: Bearer token API key authentication for protected endpoints
+- **Authentication**: X-API-Key header authentication for protected endpoints
 - **Market Hours**: Bot only trades during market hours (Mon-Fri 9:30AM-4:00PM ET)
 - **Rate Limiting**: 30 requests per minute per IP address
 - **CORS**: Enabled for all origins (configure for production)
