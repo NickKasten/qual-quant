@@ -10,9 +10,10 @@ from datetime import datetime, timezone
 import sys
 from pathlib import Path
 
-# Add backend to path for imports
-backend_dir = Path(__file__).parent.parent
-sys.path.insert(0, str(backend_dir))
+# Add project root to path for imports
+project_root = Path(__file__).resolve().parents[2]
+if str(project_root) not in sys.path:
+    sys.path.insert(0, str(project_root))
 
 from bot.strategy.signals import generate_signals, calculate_signal_strength, validate_data_sufficiency
 

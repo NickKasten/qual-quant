@@ -8,7 +8,7 @@ def test_get_performance_success(client, mock_supabase, valid_api_key):
         {"timestamp": (datetime.now(timezone.utc) - timedelta(days=i)).isoformat(), "equity": 100000.0 * (1 + i/100)}
         for i in range(30)
     ]
-    mock_supabase.return_value.table.return_value.select.return_value.gte.return_value.lte.return_value.order.return_value.execute.return_value.data = equity_data
+    mock_supabase.return_value.table.return_value.select.return_value.gte.return_value.order.return_value.execute.return_value.data = equity_data
     
     response = client.get("/api/performance", headers={"X-API-Key": valid_api_key})
     
@@ -29,7 +29,7 @@ def test_get_performance_with_date_range(client, mock_supabase, valid_api_key):
         {"timestamp": (datetime.now(timezone.utc) - timedelta(days=i)).isoformat(), "equity": 100000.0 * (1 + i/100)}
         for i in range(7)
     ]
-    mock_supabase.return_value.table.return_value.select.return_value.gte.return_value.lte.return_value.order.return_value.execute.return_value.data = equity_data
+    mock_supabase.return_value.table.return_value.select.return_value.gte.return_value.order.return_value.execute.return_value.data = equity_data
     
     start_date = (datetime.now(timezone.utc) - timedelta(days=7)).isoformat()
     end_date = datetime.now(timezone.utc).isoformat()
@@ -46,7 +46,7 @@ def test_get_performance_with_date_range(client, mock_supabase, valid_api_key):
 def test_get_performance_no_data(client, mock_supabase, valid_api_key):
     """Test performance data retrieval with no data."""
     # Mock empty Supabase response
-    mock_supabase.return_value.table.return_value.select.return_value.gte.return_value.lte.return_value.order.return_value.execute.return_value.data = []
+    mock_supabase.return_value.table.return_value.select.return_value.gte.return_value.order.return_value.execute.return_value.data = []
     
     response = client.get("/api/performance", headers={"X-API-Key": valid_api_key})
     
@@ -66,15 +66,17 @@ def test_get_performance_invalid_date_range(client, valid_api_key):
     
     assert response.status_code == 422
 
-def test_get_performance_invalid_api_key(client):
+def test_get_performance_invalid_api_key(client, monkeypatch):
     """Test performance data retrieval with invalid API key."""
+    monkeypatch.setenv("TEST_MODE", "false")
+    monkeypatch.setenv("API_KEY", "expected-key")
     response = client.get("/api/performance", headers={"X-API-Key": "invalid_key"})
     assert response.status_code == 403
 
 def test_get_performance_database_error(client, mock_supabase, valid_api_key):
     """Test performance data retrieval with database error."""
     # Mock database error
-    mock_supabase.return_value.table.return_value.select.return_value.gte.return_value.lte.return_value.order.return_value.execute.side_effect = Exception("Database error")
+    mock_supabase.return_value.table.return_value.select.return_value.gte.return_value.order.return_value.execute.side_effect = Exception("Database error")
     
     response = client.get("/api/performance", headers={"X-API-Key": valid_api_key})
     

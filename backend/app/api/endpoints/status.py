@@ -1,23 +1,39 @@
 from fastapi import APIRouter, HTTPException, Request, Depends
-from slowapi import Limiter
-from slowapi.util import get_remote_address
 from typing import Dict, Any
-from ...db.supabase import get_supabase_client
+from ...db import supabase as supabase_db
 from datetime import datetime, timedelta, timezone
 from ...core.config import LEGAL_DISCLAIMER
 from ...utils.auth import verify_api_key
 
 router = APIRouter()
-limiter = Limiter(key_func=get_remote_address)
+
+try:
+    from slowapi import Limiter
+    from slowapi.util import get_remote_address
+except ModuleNotFoundError:  # pragma: no cover - optional dependency
+    Limiter = None  # type: ignore
+    get_remote_address = None  # type: ignore
+
+
+class DummyLimiter:  # pragma: no cover - simple fallback
+    def limit(self, *_args, **_kwargs):
+        def decorator(func):
+            return func
+
+        return decorator
+
+
+limiter = Limiter(key_func=get_remote_address) if Limiter and get_remote_address else DummyLimiter()
+rate_limit = limiter.limit
 
 @router.get("/status")
-@limiter.limit("30/minute")
+@rate_limit("30/minute")
 async def get_status(request: Request, authenticated: bool = Depends(verify_api_key)):
     """
     Get system status and data delay information.
     """
     try:
-        supabase = get_supabase_client()
+        supabase = supabase_db.get_supabase_client()
         
         # Check database connection
         db_status = "healthy"

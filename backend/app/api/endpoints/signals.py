@@ -1,26 +1,43 @@
 from fastapi import APIRouter, HTTPException, Request, Depends
-from slowapi import Limiter
-from slowapi.util import get_remote_address
 from typing import Dict, Any
 import pandas as pd
-from ...db.supabase import get_supabase_client
+
+try:
+    from slowapi import Limiter
+    from slowapi.util import get_remote_address
+except ModuleNotFoundError:  # pragma: no cover - optional dependency
+    Limiter = None  # type: ignore
+    get_remote_address = None  # type: ignore
+
+from ...db import supabase as supabase_db
 from bot.strategy.signals import generate_signals
 from ...services.fetcher import fetch_ohlcv
 from ...core.config import LEGAL_DISCLAIMER
 from ...utils.auth import verify_api_key
 
 router = APIRouter()
-limiter = Limiter(key_func=get_remote_address)
+
+
+class DummyLimiter:  # pragma: no cover - simple fallback
+    def limit(self, *_args, **_kwargs):
+        def decorator(func):
+            return func
+
+        return decorator
+
+
+limiter = Limiter(key_func=get_remote_address) if Limiter and get_remote_address else DummyLimiter()
+rate_limit = limiter.limit
 
 @router.get("/signals")
-@limiter.limit("30/minute")
+@rate_limit("30/minute")
 async def get_signals(request: Request, authenticated: bool = Depends(verify_api_key)):
     """
     Get current trading signals for all tracked symbols.
     """
     try:
         # Get list of symbols from positions table
-        supabase = get_supabase_client()
+        supabase = supabase_db.get_supabase_client()
         positions_response = supabase.table("positions").select("symbol").execute()
         symbols = [pos["symbol"] for pos in positions_response.data] if positions_response.data else []
         

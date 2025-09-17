@@ -10,6 +10,7 @@ from bot.strategy.signals import generate_signals
 from bot.risk.risk import calculate_position_size
 from .services.broker.paper import execute_trade
 from .db.supabase import update_trades, update_positions, update_equity, update_signals
+from .db.operations import DatabaseOperations
 from .core.config import load_config
 from .utils.helpers import log_function_call, exponential_backoff, is_market_open, get_time_until_market_open
 from .utils.monitoring import monitor
@@ -48,7 +49,6 @@ def run_trading_cycle(symbol: str = "AAPL"):
         logger.info("Configuration loaded successfully")
 
         # Check if we've already traded this symbol today
-        from .db.operations import DatabaseOperations
         db_ops = DatabaseOperations()
         
         # Get today's date in market timezone (ET)
@@ -84,7 +84,6 @@ def run_trading_cycle(symbol: str = "AAPL"):
         current_equity = float(settings["STARTING_EQUITY"])
         
         # Fetch current positions from database
-        from .db.operations import DatabaseOperations
         db_ops = DatabaseOperations()
         current_positions = db_ops.get_positions()
         open_positions = len(current_positions)

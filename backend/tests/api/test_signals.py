@@ -5,9 +5,9 @@ import pandas as pd
 
 def test_get_signals_success(client, sample_signals_data, valid_api_key):
     """Test successful signals retrieval."""
-    with patch('app.db.supabase.get_supabase_client') as mock_supabase, \
-         patch('app.services.fetcher.fetch_ohlcv') as mock_fetch, \
-         patch('bot.strategy.signals.generate_signals') as mock_signals:
+    with patch('backend.app.api.endpoints.signals.supabase_db.get_supabase_client') as mock_supabase, \
+         patch('backend.app.api.endpoints.signals.fetch_ohlcv') as mock_fetch, \
+         patch('backend.app.api.endpoints.signals.generate_signals') as mock_signals:
         
         # Create a complete mock client
         mock_client = MagicMock()
@@ -41,8 +41,8 @@ def test_get_signals_success(client, sample_signals_data, valid_api_key):
 
 def test_get_signals_with_symbol(client, mock_supabase, sample_signals_data, valid_api_key):
     """Test signals retrieval for specific symbol."""
-    with patch('app.services.fetcher.fetch_ohlcv') as mock_fetch, \
-         patch('bot.strategy.signals.generate_signals') as mock_signals:
+    with patch('backend.app.api.endpoints.signals.fetch_ohlcv') as mock_fetch, \
+         patch('backend.app.api.endpoints.signals.generate_signals') as mock_signals:
         
         # Mock positions response
         mock_supabase.return_value.table.return_value.select.return_value.execute.return_value.data = [{'symbol': 'AAPL'}]
@@ -68,8 +68,8 @@ def test_get_signals_with_symbol(client, mock_supabase, sample_signals_data, val
 
 def test_get_signals_no_data(client, mock_supabase, valid_api_key):
     """Test signals retrieval with no positions (should default to AAPL)."""
-    with patch('app.services.fetcher.fetch_ohlcv') as mock_fetch, \
-         patch('bot.strategy.signals.generate_signals') as mock_signals:
+    with patch('backend.app.api.endpoints.signals.fetch_ohlcv') as mock_fetch, \
+         patch('backend.app.api.endpoints.signals.generate_signals') as mock_signals:
         
         # Mock empty positions response
         mock_supabase.return_value.table.return_value.select.return_value.execute.return_value.data = []

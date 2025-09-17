@@ -8,12 +8,20 @@ from pathlib import Path
 from dotenv import load_dotenv
 from fastapi.testclient import TestClient
 
+import backend.app.services.fetcher as fetcher
+
 # Load .env file from project root
 load_dotenv(dotenv_path=os.path.join(os.path.dirname(__file__), '../../.env'))
 
-# Add the backend directory to the Python path
-backend_dir = Path(__file__).parent.parent
-sys.path.insert(0, str(backend_dir))
+# Ensure project root is on sys.path for backend and bot packages
+project_root = Path(__file__).resolve().parents[2]
+backend_dir = project_root / 'backend'
+
+if str(project_root) not in sys.path:
+    sys.path.insert(0, str(project_root))
+
+if str(backend_dir) not in sys.path:
+    sys.path.insert(1, str(backend_dir))
 
 @pytest.fixture(autouse=True)
 def setup_test_env():
@@ -47,6 +55,15 @@ def setup_test_env():
             os.environ[key] = original_env[key]
         else:
             os.environ.pop(key, None)
+
+@pytest.fixture(autouse=True)
+def clear_fetcher_cache():
+    """Ensure fetcher caches do not leak between tests."""
+    fetcher.cache.clear()
+    fetcher.fallback_cache.clear()
+    yield
+    fetcher.cache.clear()
+    fetcher.fallback_cache.clear()
 
 @pytest.fixture
 def mock_requests():
@@ -109,42 +126,30 @@ def mock_requests():
 
 @pytest.fixture
 def mock_supabase():
-    """Mock Supabase database operations."""
-    with patch('app.db.supabase.get_supabase_client') as mock_client:
-        # Create a flexible mock client that handles any query chain
-        mock_supabase_client = MagicMock()
-        
-        # Create a flexible mock that returns itself for all methods
-        # This allows any chaining pattern to work
-        flexible_mock = MagicMock()
-        flexible_mock.data = []  # Default empty data
-        
-        # The flexible mock returns itself for any method call
-        flexible_mock.table.return_value = flexible_mock
-        flexible_mock.select.return_value = flexible_mock
-        flexible_mock.gte.return_value = flexible_mock
-        flexible_mock.lte.return_value = flexible_mock
-        flexible_mock.order.return_value = flexible_mock
-        flexible_mock.limit.return_value = flexible_mock
-        flexible_mock.execute.return_value = flexible_mock
-        flexible_mock.insert.return_value = flexible_mock
-        flexible_mock.upsert.return_value = flexible_mock
-        flexible_mock.update.return_value = flexible_mock
-        flexible_mock.delete.return_value = flexible_mock
-        flexible_mock.eq.return_value = flexible_mock
-        flexible_mock.neq.return_value = flexible_mock
-        flexible_mock.gt.return_value = flexible_mock
-        flexible_mock.lt.return_value = flexible_mock
-        flexible_mock.like.return_value = flexible_mock
-        flexible_mock.ilike.return_value = flexible_mock
-        flexible_mock.is_.return_value = flexible_mock
-        flexible_mock.filter.return_value = flexible_mock
-        
-        # Make the client return this flexible mock
-        mock_supabase_client.table.return_value = flexible_mock
-        mock_client.return_value = mock_supabase_client
-        
-        yield mock_client
+    """Mock Supabase database operations across both new and legacy import paths."""
+    with patch('backend.app.db.supabase.get_supabase_client') as backend_supabase_patch, \
+         patch('app.db.supabase.get_supabase_client') as app_supabase_patch, \
+         patch('backend.app.db.client.DatabaseClient.get_instance') as backend_db_patch, \
+         patch('app.db.client.DatabaseClient.get_instance') as app_db_patch:
+        supabase_client = MagicMock(name='supabase_client')
+
+        query_mock = MagicMock(name='supabase_query')
+        query_mock.data = []
+        for attr in [
+            'select', 'gte', 'lte', 'order', 'limit', 'execute', 'insert',
+            'upsert', 'update', 'delete', 'eq', 'neq', 'gt', 'lt', 'like',
+            'ilike', 'is_', 'filter', 'range'
+        ]:
+            setattr(query_mock, attr, query_mock)
+
+        supabase_client.table.return_value = query_mock
+
+        backend_supabase_patch.return_value = supabase_client
+        app_supabase_patch.return_value = supabase_client
+        backend_db_patch.return_value = supabase_client
+        app_db_patch.return_value = supabase_client
+
+        yield backend_supabase_patch
 
 @pytest.fixture
 def sample_ohlcv_data():
@@ -171,6 +176,21 @@ def sample_trade_data():
         'timestamp': datetime.now(timezone.utc).isoformat(),
         'simulated': True
     }
+
+@pytest.fixture
+def sample_trades_data():
+    """Provide sample trades collection for testing."""
+    return [
+        {
+            'id': 1,
+            'symbol': 'AAPL',
+            'side': 'buy',
+            'quantity': 10,
+            'price': 150.0,
+            'timestamp': datetime.now(timezone.utc).isoformat(),
+            'strategy': 'sma_crossover'
+        }
+    ]
 
 @pytest.fixture
 def sample_position_data():

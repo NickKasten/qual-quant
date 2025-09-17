@@ -1,3 +1,4 @@
+import os
 import pytest
 from datetime import datetime
 from unittest.mock import MagicMock
@@ -52,14 +53,18 @@ def test_get_portfolio_no_data(client, mock_supabase, valid_api_key):
     assert len(data["positions"]) == 0
     assert data["current_equity"] == 0
 
-def test_get_portfolio_invalid_api_key(client):
+def test_get_portfolio_invalid_api_key(client, monkeypatch):
     """Test portfolio retrieval with invalid API key."""
+    monkeypatch.setenv("TEST_MODE", "false")
+    monkeypatch.setenv("API_KEY", "expected-key")
     response = client.get("/api/portfolio", headers={"X-API-Key": "invalid_key"})
     
     assert response.status_code == 403
 
-def test_get_portfolio_missing_api_key(client):
+def test_get_portfolio_missing_api_key(client, monkeypatch):
     """Test portfolio retrieval without API key."""
+    monkeypatch.setenv("TEST_MODE", "false")
+    monkeypatch.setenv("API_KEY", "expected-key")
     response = client.get("/api/portfolio")
     
     assert response.status_code == 403
