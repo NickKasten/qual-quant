@@ -1,0 +1,15 @@
+# .codex/config.toml
+
+[mcp_servers.supabase]
+command = "npx"
+args = ["-y","@supabase/mcp-server-supabase","--read-only","--project-ref=<YOUR_PROJECT_REF>"]
+env.SUPABASE_ACCESS_TOKEN = "<YOUR_SUPABASE_PAT>"
+
+[mcp_servers.render]
+command = "npx"
+args = ["-y","mcp-remote","https://mcp.render.com/mcp","--header","Authorization:${RENDER_AUTH}"]
+env.RENDER_AUTH = "Bearer <YOUR_RENDER_API_KEY>"
+
+[mcp_servers.vercel]
+command = "npx"
+args = ["-y","mcp-remote","https://mcp.vercel.com"]

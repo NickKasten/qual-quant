@@ -31,7 +31,7 @@ shutdown_flag = False
 class BackgroundBot:
     """Background trading bot that runs in a separate thread."""
     
-    def __init__(self, interval_seconds: int = 3600, symbols: Optional[List[str]] = None):
+    def __init__(self, interval_seconds: int = 300, symbols: Optional[List[str]] = None):
         self.interval_seconds = interval_seconds
         self.running = False
         self.thread = None
@@ -130,7 +130,7 @@ def signal_handler(signum, _frame):
 
 
 def run_background_bot_loop(symbols: str = "AAPL,MSFT,JNJ,UNH,V",
-                           interval: int = 3600,
+                           interval: int = 300,
                            max_loops: Optional[int] = None):
     """
     Run the background bot main loop (for standalone bot mode).

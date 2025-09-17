@@ -3,7 +3,7 @@ Supports multiple server modes: api, combined, bot."""
 import argparse
 import sys
 import os
-from datetime import datetime, timezone, timedelta
+from datetime import datetime
 
 from .services.fetcher import fetch_ohlcv
 from bot.strategy.signals import generate_signals
@@ -48,29 +48,8 @@ def run_trading_cycle(symbol: str = "AAPL"):
         settings = load_config()
         logger.info("Configuration loaded successfully")
 
-        # Check if we've already traded this symbol today
+        # Set up database operations client
         db_ops = DatabaseOperations()
-        
-        # Get today's date in market timezone (ET)
-        from zoneinfo import ZoneInfo
-        et_tz = ZoneInfo("America/New_York")
-        today_et = datetime.now(et_tz).date()
-        
-        # Check for existing trades today
-        recent_trades = db_ops.get_recent_trades(symbol, days=1)
-        
-        # Filter trades to only those from today (ET timezone)
-        today_trades = []
-        for trade in recent_trades:
-            trade_date_et = trade.timestamp.astimezone(et_tz).date()
-            if trade_date_et == today_et:
-                today_trades.append(trade)
-        
-        if today_trades:
-            logger.info(f"⏭️ Trading cycle skipped: Already traded {symbol} today ({len(today_trades)} trades)")
-            logger.info(f"Last trade: {today_trades[-1].side.upper()} {today_trades[-1].quantity} shares at ${today_trades[-1].price:.2f}")
-            monitor.record_success()
-            return
 
         # Fetch OHLCV data
         data = fetch_ohlcv(symbol)
@@ -82,9 +61,8 @@ def run_trading_cycle(symbol: str = "AAPL"):
 
         # Get current equity and open positions from DB first (needed for signal generation)
         current_equity = float(settings["STARTING_EQUITY"])
-        
+
         # Fetch current positions from database
-        db_ops = DatabaseOperations()
         current_positions = db_ops.get_positions()
         open_positions = len(current_positions)
         
@@ -99,14 +77,13 @@ def run_trading_cycle(symbol: str = "AAPL"):
         
         logger.info(f"Current positions: {open_positions}, Existing {symbol} position: {existing_position_qty}")
 
-        # Perform daily market analysis
-        logger.info(f"📊 Starting daily market analysis for {symbol}")
-        logger.info(f"Analysis date: {today_et}")
-        
+        # Perform intraday market analysis
+        logger.info(f"📊 Starting intraday market analysis for {symbol}")
+
         # Generate trading signals with position awareness
         signals = generate_signals(data, existing_position=existing_position_qty)
         if not signals:
-            logger.info("No signals generated from daily analysis")
+            logger.info("No signals generated from intraday analysis")
             return
 
         # Store signals to database
@@ -120,7 +97,7 @@ def run_trading_cycle(symbol: str = "AAPL"):
         }
         
         # Log signal details for debugging
-        logger.info(f"📈 Daily analysis result: {signals.get('side').upper()} signal with strength {signals.get('strength'):.3f}")
+        logger.info(f"📈 Analysis result: {signals.get('side').upper()} signal with strength {signals.get('strength'):.3f}")
         if signals.get('used_fallback'):
             logger.info("Used fallback strategy due to insufficient data")
         
@@ -130,9 +107,9 @@ def run_trading_cycle(symbol: str = "AAPL"):
         current_price = data['close'].iloc[-1] if not data.empty else 100.0
         position_size_data = calculate_position_size(signals, current_equity, open_positions, current_price)
         if not position_size_data:
-            logger.info(f"📊 Daily analysis for {symbol} complete: HOLD signal - no trade executed")
-            logger.info(f"Next analysis: {(datetime.now(et_tz) + timedelta(days=1)).strftime('%Y-%m-%d')}")
+            logger.info(f"📊 Analysis for {symbol} complete: HOLD signal - no trade executed")
             logger.info("Trading cycle completed successfully (hold)")
+            logger.info("Next run in approximately 5 minutes")
             monitor.record_success()
             return
 
@@ -169,11 +146,11 @@ def run_trading_cycle(symbol: str = "AAPL"):
                     monitor.record_success()
                     return
         
-        # Execute daily trade based on analysis
-        logger.info(f"🎯 Executing daily trade for {symbol}: {side.upper()} {position_size} shares")
+        # Execute trade based on analysis
+        logger.info(f"🎯 Executing trade for {symbol}: {side.upper()} {position_size} shares")
         trade_result = execute_trade(position_size, symbol=symbol, side=side, simulate=True)
         if not trade_result:
-            error_msg = "Failed to execute daily trade"
+            error_msg = "Failed to execute trade"
             logger.error(error_msg)
             monitor.record_failure(error_msg)
             return
@@ -263,8 +240,8 @@ def run_trading_cycle(symbol: str = "AAPL"):
         
         logger.info(f"Portfolio update: Cash=${new_cash:.2f}, Positions=${total_position_value:.2f}, Total=${total_portfolio_value:.2f}")
 
-        logger.info(f"✅ Daily trade executed successfully for {symbol}")
-        logger.info(f"Next trade opportunity: {(datetime.now(et_tz) + timedelta(days=1)).strftime('%Y-%m-%d')}")
+        logger.info(f"✅ Trade executed successfully for {symbol}")
+        logger.info("Next run in approximately 5 minutes")
         monitor.record_success()
     except Exception as e:
         error_msg = f"Error in trading cycle: {e}"
@@ -279,7 +256,7 @@ def main():
                        default='bot', help="Server mode: api (API only), combined (API+bot), bot (bot only)")
     parser.add_argument('--symbols', type=str, default=os.environ.get("TRADING_SYMBOLS", "AAPL,MSFT,JNJ,UNH,V"), 
                        help="Comma-separated ticker symbols to trade")
-    parser.add_argument('--interval', type=int, default=int(os.environ.get("TRADING_INTERVAL", "3600")), 
+    parser.add_argument('--interval', type=int, default=int(os.environ.get("TRADING_INTERVAL", "300")), 
                        help="Trading cycle interval in seconds")
     parser.add_argument('--max-loops', type=int, default=None, help="Maximum number of cycles (for testing)")
     parser.add_argument('--host', type=str, default="0.0.0.0", help="Host to bind server to")

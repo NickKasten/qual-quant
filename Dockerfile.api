@@ -30,4 +30,4 @@ ENV RUN_MODE=api
 EXPOSE 8000
 
 # Run only the API server (no bot)
-CMD ["python", "-m", "backend.app.api_server"]
+CMD ["python", "-m", "backend.app.main", "--mode", "api"]

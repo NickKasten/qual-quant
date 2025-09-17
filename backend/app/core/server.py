@@ -213,7 +213,7 @@ def run_combined_server(host: str = "0.0.0.0", port: Optional[int] = None, **kwa
 
 
 def run_background_bot(symbols: str = "AAPL,MSFT,JNJ,UNH,V", 
-                      interval: int = 3600,
+                      interval: int = 300,
                       max_loops: Optional[int] = None,
                       health_port: int = 8080):
     """

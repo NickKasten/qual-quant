@@ -18,12 +18,12 @@ echo "PORT environment variable: '$PORT'"
 # Check if we should run API server or trading bot
 if [ "$RUN_MODE" = "api" ]; then
     echo "Starting API server only on port $PORT..."
-    exec python -m backend.app.api_server
+    exec python -m backend.app.main --mode api --host 0.0.0.0 --port "${PORT:-8000}"
 elif [ ! -z "$PORT" ]; then
     # If PORT is set but RUN_MODE isn't "api", run combined server (API + bot)
     echo "PORT detected, starting combined API server + bot on port $PORT..."
-    exec python -m backend.app.combined_server
+    exec python -m backend.app.main --mode combined --host 0.0.0.0 --port "$PORT"
 else
     echo "Starting trading bot only..."
-    exec python -m backend.app.main
-fi 
+    exec python -m backend.app.main --mode bot
+fi

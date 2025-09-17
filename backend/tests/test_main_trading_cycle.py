@@ -96,31 +96,46 @@ class TestTradingCycle:
         mock_update_equity.assert_called_once()
         mock_update_signals.assert_called_once()
     
-    @patch('backend.app.main.load_config')
-    @patch('backend.app.main.DatabaseOperations')
+    @patch('backend.app.main.update_signals')
+    @patch('backend.app.main.update_equity')
+    @patch('backend.app.main.update_positions')
+    @patch('backend.app.main.update_trades')
+    @patch('backend.app.main.execute_trade')
+    @patch('backend.app.main.calculate_position_size')
+    @patch('backend.app.main.generate_signals')
     @patch('backend.app.main.fetch_ohlcv')
-    def test_skip_when_already_traded_today(self, mock_fetch_ohlcv, mock_db_ops, mock_load_config):
-        """Test that trading cycle is skipped when already traded today."""
-        
-        # Setup mocks
+    @patch('backend.app.main.DatabaseOperations')
+    @patch('backend.app.main.load_config')
+    def test_continues_when_recent_trade_exists(self, mock_load_config, mock_db_ops, mock_fetch_ohlcv,
+                                                mock_generate_signals, mock_calculate_position_size,
+                                                mock_execute_trade, mock_update_trades,
+                                                mock_update_positions, mock_update_equity,
+                                                mock_update_signals):
+        """Trading cycle should still run even if a trade already occurred today."""
+
         mock_load_config.return_value = {"STARTING_EQUITY": "100000"}
-        
-        # Mock existing trade from today
+
         mock_trade = MagicMock()
         mock_trade.timestamp = datetime.now(timezone.utc)
         mock_trade.side = 'buy'
         mock_trade.quantity = 5
         mock_trade.price = 100.0
-        
+
         db_instance = MagicMock()
         mock_db_ops.return_value = db_instance
         db_instance.get_recent_trades.return_value = [mock_trade]
-        
-        # Run trading cycle
+        db_instance.get_positions.return_value = []
+        db_instance.get_equity_history.return_value = []
+
+        mock_fetch_ohlcv.return_value = pd.DataFrame({'close': [100, 101, 102]})
+        mock_generate_signals.return_value = {'side': 'hold', 'signal': 0, 'strength': 0.4}
+        mock_calculate_position_size.return_value = None
+
         run_trading_cycle('AAPL')
-        
-        # Verify market data was not fetched (cycle skipped early)
-        mock_fetch_ohlcv.assert_not_called()
+
+        mock_fetch_ohlcv.assert_called_once_with('AAPL')
+        mock_generate_signals.assert_called_once()
+        mock_calculate_position_size.assert_called_once()
     
     @patch('backend.app.main.load_config')
     @patch('backend.app.main.DatabaseOperations')

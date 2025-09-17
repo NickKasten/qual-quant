@@ -112,6 +112,25 @@ API_KEY=your_secure_api_key_for_endpoints
 - For production, update API_BASE_URL to your deployed API service URL
 - Next.js requires environment variables to be in `.env.local` for local development
 
+### Render Deployment Checklist
+
+Configure both Render services (`qualquant-api` web service and `qualquant-bot` worker) with the same secret credentials so they operate against the same Supabase project and market data sources. At minimum add:
+
+- `TIINGO_API_KEY`
+- `ALPHA_VANTAGE_API_KEY`
+- `ALPACA_API_KEY`
+- `ALPACA_SECRET_KEY`
+- `SUPABASE_URL`
+- `SUPABASE_KEY`
+- `API_KEY`
+
+Service-specific settings:
+
+- **qualquant-api**: `RUN_MODE=api`, `PORT=8000`, plus any risk parameters (`STARTING_EQUITY`, `RISK_PER_TRADE`, `MAX_POSITION_SIZE`).
+- **qualquant-bot**: `RUN_MODE=bot`, `TRADING_INTERVAL=300` (5 minute cadence per the PRD), `TRADING_SYMBOL` (comma-separated list), and the same risk parameters as the API.
+
+If you adjust cadence or symbols later, update both `render.yaml` and the Render dashboard to keep configuration aligned.
+
 ### Installation
 
 1. Clone the repository:
