@@ -47,8 +47,7 @@ class TestSupabase(unittest.TestCase):
         self.valid_equity = {
             'timestamp': datetime.now(UTC).isoformat(),
             'equity': 100000.0,
-            'cash': 90000.0,
-            'total_value': 100000.0  # Changed from 'buying_power' to 'total_value'
+            'cash': 90000.0
         }
 
     def test_validate_trade_data(self):

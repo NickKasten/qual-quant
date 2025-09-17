@@ -35,7 +35,6 @@ CREATE TABLE IF NOT EXISTS equity (
     timestamp TIMESTAMPTZ NOT NULL UNIQUE,
     equity DECIMAL(20, 8) NOT NULL,
     cash DECIMAL(20, 8) NOT NULL,
-    total_value DECIMAL(20, 8) NOT NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 

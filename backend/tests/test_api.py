@@ -18,7 +18,7 @@ MOCK_POSITIONS = [
 ]
 
 MOCK_EQUITY = [
-    {"equity": 100000.0, "cash": 50000.0, "total_value": 150000.0, "timestamp": (datetime.now(UTC) - timedelta(minutes=15)).isoformat()}
+    {"equity": 100000.0, "cash": 50000.0, "timestamp": (datetime.now(UTC) - timedelta(minutes=15)).isoformat()}
 ]
 
 MOCK_TRADES = [
@@ -115,6 +115,14 @@ def test_get_status(_):
     data = response.json()
     assert "status" in data
     assert "system_time" in data
+
+
+@patch("backend.app.api.endpoints.status.supabase_db.get_supabase_client", side_effect=supabase_mock_factory)
+def test_public_status(_):
+    response = client.get("/status")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["status"]["database"] == "healthy"
 
 
 def test_rate_limiting():

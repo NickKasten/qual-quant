@@ -66,8 +66,7 @@ def test_equity_operations(db_ops):
     """Test equity operations."""
     equity = Equity(
         equity=10000.0,
-        cash=5000.0,
-        total_value=15000.0
+        cash=5000.0
     )
     
     created_equity = db_ops.record_equity(equity)

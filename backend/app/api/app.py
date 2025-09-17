@@ -84,6 +84,10 @@ def create_app() -> FastAPI:
     # Import and include routers
     from .endpoints import portfolio, trades, performance, signals, status
 
+    @app.get("/status")
+    async def public_status():
+        return status.build_status_payload()
+
     app.include_router(portfolio.router, prefix="/api", tags=["portfolio"])
     app.include_router(trades.router, prefix="/api", tags=["trades"])
     app.include_router(performance.router, prefix="/api", tags=["performance"])

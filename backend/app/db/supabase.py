@@ -69,7 +69,7 @@ def validate_equity_data(equity_data: Dict) -> bool:
     """
     Validate equity data before writing to database.
     """
-    required_fields = ['equity', 'cash', 'total_value', 'timestamp']
+    required_fields = ['equity', 'cash', 'timestamp']
     return all(field in equity_data for field in required_fields)
 
 def setup_tables():

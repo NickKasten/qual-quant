@@ -70,8 +70,7 @@ def _init_equity(client, starting_equity: float) -> None:
             initial_equity = Equity(
                 timestamp=datetime.now(UTC),
                 equity=starting_equity,
-                cash=starting_equity,
-                total_value=starting_equity
+                cash=starting_equity
             )
             # Convert datetime to serializable format
             data = initial_equity.model_dump(exclude={'id'})

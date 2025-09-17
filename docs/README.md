@@ -344,8 +344,7 @@ Equity curve data and performance metrics.
     {
       "timestamp": "2025-06-19T02:45:00Z",
       "equity": 100000.00,
-      "cash": 95000.00,
-      "total_value": 100500.00
+      "cash": 95000.00
     }
   ],
   "metrics": {

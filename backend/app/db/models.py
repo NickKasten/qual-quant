@@ -31,7 +31,6 @@ class Equity(BaseModel):
     timestamp: datetime = Field(default_factory=datetime.utcnow)
     equity: float
     cash: float
-    total_value: float
 
 class Signal(BaseModel):
     """Model for trading signals."""

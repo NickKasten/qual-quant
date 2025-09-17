@@ -222,7 +222,6 @@ def sample_portfolio_data():
             {
                 'equity': 101000.0,
                 'cash': 90000.0,
-                'total_value': 101000.0,
                 'timestamp': datetime.now(timezone.utc).isoformat()
             }
         ]

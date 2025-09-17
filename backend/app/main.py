@@ -229,16 +229,15 @@ def run_trading_cycle(symbol: str = "AAPL"):
             total_position_value += pos.quantity * pos.current_price
         
         total_portfolio_value = new_cash + total_position_value
-        
+
         equity_data = {
             'equity': total_portfolio_value,
             'cash': new_cash,
-            'total_value': total_portfolio_value,
             'timestamp': trade_result['timestamp']
         }
         update_equity(equity_data)
-        
-        logger.info(f"Portfolio update: Cash=${new_cash:.2f}, Positions=${total_position_value:.2f}, Total=${total_portfolio_value:.2f}")
+
+        logger.info(f"Portfolio update: Cash=${new_cash:.2f}, Positions=${total_position_value:.2f}, Equity=${total_portfolio_value:.2f}")
 
         logger.info(f"✅ Trade executed successfully for {symbol}")
         logger.info("Next run in approximately 5 minutes")
