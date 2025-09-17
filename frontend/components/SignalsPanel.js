@@ -142,22 +142,23 @@ export default function SignalsPanel() {
 
         {Object.keys(signalsData).length > 0 ? (
           <div className="space-y-6">
-            {Object.entries(signalsData).map(([symbol, data]) => (
-              <div key={symbol} className="border border-gray-200 rounded-lg p-4">
+            {Object.entries(signalsData).map(([symbol, data]) => {
+              const normalizedSignal = (data.signal || 'HOLD').toUpperCase();
+              const signalBadge = (
+                <div className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${getSignalColor(normalizedSignal)}`}>
+                  {getSignalIcon(normalizedSignal)}
+                  <span className="ml-1">{normalizedSignal}</span>
+                </div>
+              );
+
+              return (
+                <div key={symbol} className="border border-gray-200 rounded-lg p-4">
                 <div className="flex items-center justify-between mb-4">
                   <h4 className="text-lg font-medium text-gray-900">{symbol}</h4>
                   {data.error ? (
                     <span className="text-red-600 text-sm">Error: {data.error}</span>
                   ) : (
-                    (() => {
-                      const normalizedSignal = (data.signal || 'HOLD').toUpperCase();
-                      return (
-                        <div className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${getSignalColor(normalizedSignal)}`}>
-                          {getSignalIcon(normalizedSignal)}
-                          <span className="ml-1">{normalizedSignal}</span>
-                        </div>
-                      );
-                    })()
+                    signalBadge
                   )}
                 </div>
 
@@ -205,8 +206,9 @@ export default function SignalsPanel() {
                     </div>
                   </div>
                 )}
-              </div>
-            ))}
+                </div>
+              );
+            })}
           </div>
         ) : (
           <div className="text-center py-16 text-sm text-gray-600">
