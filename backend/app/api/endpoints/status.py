@@ -2,7 +2,7 @@ from fastapi import APIRouter, HTTPException, Request, Depends
 from typing import Dict, Any
 from ...db import supabase as supabase_db
 from datetime import datetime, timezone
-from ...core.config import LEGAL_DISCLAIMER
+from ...core.config import LEGAL_DISCLAIMER, ConfigError
 from ...utils.auth import verify_api_key
 
 router = APIRouter()
@@ -29,7 +29,21 @@ rate_limit = limiter.limit
 
 def build_status_payload() -> Dict[str, Any]:
     """Collect service health information for status endpoints."""
-    supabase = supabase_db.get_supabase_client()
+    try:
+        supabase = supabase_db.get_supabase_client()
+    except ConfigError as exc:
+        return {
+            "status": {
+                "database": "unconfigured",
+                "api": "healthy"
+            },
+            "data_delay_minutes": None,
+            "last_update": None,
+            "system_time": datetime.now(timezone.utc).isoformat(),
+            "version": "1.0.0",
+            "disclaimer": LEGAL_DISCLAIMER,
+            "message": str(exc)
+        }
 
     db_status = "healthy"
     try:
