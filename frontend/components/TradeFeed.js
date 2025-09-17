@@ -108,20 +108,27 @@ export default function TradeFeed() {
   if (error) {
     return (
       <div className="bg-white overflow-hidden shadow rounded-lg">
-        <div className="p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg leading-6 font-medium text-gray-900">Trade Feed</h3>
-            <button
-              onClick={fetchTrades}
-              className="text-sm text-primary-600 hover:text-primary-800"
-            >
-              Retry
-            </button>
+        <div className="p-6 text-center">
+          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-red-100 text-red-600">
+            <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v3m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
           </div>
-          <p className="text-sm text-gray-600">
-            Trade history is unavailable. Confirm the API key is set and that the trading backend is reachable.
+          <h3 className="text-lg font-medium text-gray-900">We couldn’t load trade history</h3>
+          <p className="mt-2 text-sm text-gray-600">
+            The API call for trades failed. Check the backend service and Supabase credentials, then try again.
           </p>
-          <p className="mt-3 text-xs text-red-600 bg-red-50 rounded px-3 py-2 font-mono break-all">
+          <div className="mt-4 flex justify-center space-x-3 text-xs text-gray-500">
+            <span>• Confirm API connectivity</span>
+            <span>• Verify Supabase service-role key</span>
+          </div>
+          <button
+            onClick={fetchTrades}
+            className="mt-6 inline-flex items-center rounded-md border border-transparent bg-primary-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-primary-700"
+          >
+            Try again
+          </button>
+          <p className="mt-3 overflow-hidden text-ellipsis whitespace-pre-line break-all rounded bg-red-50 px-3 py-2 text-left text-xs text-red-600">
             {error}
           </p>
         </div>

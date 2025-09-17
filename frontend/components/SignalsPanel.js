@@ -99,20 +99,28 @@ export default function SignalsPanel() {
   if (error) {
     return (
       <div className="bg-white overflow-hidden shadow rounded-lg">
-        <div className="p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg leading-6 font-medium text-gray-900">Trading Signals</h3>
-            <button
-              onClick={fetchSignals}
-              className="text-sm text-primary-600 hover:text-primary-800"
-            >
-              Retry
-            </button>
+        <div className="p-6 text-center">
+          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-red-100 text-red-600">
+            <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v3m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
           </div>
-          <p className="text-sm text-gray-600">
-            Signals could not be refreshed. Make sure the API is reachable and that market-data credentials are valid.
+          <h3 className="text-lg font-medium text-gray-900">Signals are temporarily unavailable</h3>
+          <p className="mt-2 text-sm text-gray-600">
+            The strategy wasn’t able to publish signal data. Confirm the market-data providers are configured and that
+            the trading API is reachable.
           </p>
-          <p className="mt-3 text-xs text-red-600 bg-red-50 rounded px-3 py-2 font-mono break-all">
+          <div className="mt-4 flex justify-center space-x-3 text-xs text-gray-500">
+            <span>• Validate Tiingo / Alpha Vantage keys</span>
+            <span>• Inspect Render bot logs</span>
+          </div>
+          <button
+            onClick={fetchSignals}
+            className="mt-6 inline-flex items-center rounded-md border border-transparent bg-primary-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-primary-700"
+          >
+            Try again
+          </button>
+          <p className="mt-3 overflow-hidden text-ellipsis whitespace-pre-line break-all rounded bg-red-50 px-3 py-2 text-left text-xs text-red-600">
             {error}
           </p>
         </div>
