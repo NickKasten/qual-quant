@@ -149,16 +149,15 @@ export default function SignalsPanel() {
                   {data.error ? (
                     <span className="text-red-600 text-sm">Error: {data.error}</span>
                   ) : (
-                  {(() => {
-                    const normalizedSignal = (data.signal || 'HOLD').toUpperCase();
-                    return (
-                      <div className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${getSignalColor(normalizedSignal)}`}>
-                        {getSignalIcon(normalizedSignal)}
-                        <span className="ml-1">{normalizedSignal}</span>
-                      </div>
-                    );
-                  })()}
-                    </div>
+                    (() => {
+                      const normalizedSignal = (data.signal || 'HOLD').toUpperCase();
+                      return (
+                        <div className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${getSignalColor(normalizedSignal)}`}>
+                          {getSignalIcon(normalizedSignal)}
+                          <span className="ml-1">{normalizedSignal}</span>
+                        </div>
+                      );
+                    })()
                   )}
                 </div>
 
