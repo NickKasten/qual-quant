@@ -136,11 +136,13 @@ def mock_supabase():
         query_mock = MagicMock(name='supabase_query')
         query_mock.data = []
         for attr in [
-            'select', 'gte', 'lte', 'order', 'limit', 'execute', 'insert',
+            'select', 'gte', 'lte', 'order', 'limit', 'insert',
             'upsert', 'update', 'delete', 'eq', 'neq', 'gt', 'lt', 'like',
             'ilike', 'is_', 'filter', 'range'
         ]:
-            setattr(query_mock, attr, query_mock)
+            setattr(query_mock, attr, MagicMock(return_value=query_mock))
+
+        query_mock.execute = MagicMock(return_value=MagicMock(data=[]))
 
         supabase_client.table.return_value = query_mock
 

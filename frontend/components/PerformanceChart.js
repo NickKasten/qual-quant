@@ -25,14 +25,30 @@ export default function PerformanceChart() {
     }
   };
 
-  const formatChartData = (equityData) => {
-    if (!equityData || equityData.length === 0) return [];
-    
-    return equityData.map(point => ({
-      date: new Date(point.timestamp).toLocaleDateString(),
-      equity: parseFloat(point.equity),
-      timestamp: point.timestamp
-    }));
+  const formatChartData = (portfolioData, benchmarkData) => {
+    const merged = new Map();
+
+    const appendSeries = (series, key) => {
+      if (!Array.isArray(series)) return;
+
+      series.forEach((point) => {
+        if (!point?.timestamp) return;
+        const timestamp = point.timestamp;
+        const dateLabel = new Date(timestamp).toLocaleDateString();
+        const existing = merged.get(timestamp) || { timestamp, date: dateLabel };
+        if (typeof point.equity === 'number' || point.equity) {
+          existing[key] = parseFloat(point.equity);
+        }
+        merged.set(timestamp, existing);
+      });
+    };
+
+    appendSeries(portfolioData, 'portfolioEquity');
+    appendSeries(benchmarkData, 'benchmarkEquity');
+
+    return Array.from(merged.values()).sort(
+      (a, b) => new Date(a.timestamp) - new Date(b.timestamp)
+    );
   };
 
   const formatCurrency = (value) => {
@@ -94,7 +110,12 @@ export default function PerformanceChart() {
     );
   }
 
-  const chartData = formatChartData(performance?.equity_curve || []);
+  const chartData = formatChartData(
+    performance?.equity_curve || [],
+    performance?.benchmark_curve || []
+  );
+  const hasBenchmark = chartData.some((point) => typeof point.benchmarkEquity === 'number');
+  const metricsGridClass = hasBenchmark ? 'md:grid-cols-5' : 'md:grid-cols-4';
 
   return (
     <div className="bg-white overflow-hidden shadow rounded-lg">
@@ -119,7 +140,7 @@ export default function PerformanceChart() {
         </div>
 
         {performance?.metrics && (
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+          <div className={`grid grid-cols-1 ${metricsGridClass} gap-4 mb-6`}>
             <div className="text-center">
               <dt className="text-sm font-medium text-gray-500">Initial Equity</dt>
               <dd className="mt-1 text-lg font-semibold text-gray-900">
@@ -147,6 +168,19 @@ export default function PerformanceChart() {
                 {performance.metrics.period_days} days
               </dd>
             </div>
+            {performance?.benchmark_metrics && (
+              <div className="text-center">
+                <dt className="text-sm font-medium text-gray-500">
+                  {`Benchmark (${performance?.benchmark_symbol || 'SPY'})`}
+                </dt>
+                <dd className={`mt-1 text-lg font-semibold ${
+                  performance.benchmark_metrics.total_return_percent >= 0 ? 'text-green-600' : 'text-red-600'
+                }`}>
+                  {performance.benchmark_metrics.total_return_percent >= 0 ? '+' : ''}
+                  {performance.benchmark_metrics.total_return_percent.toFixed(2)}%
+                </dd>
+              </div>
+            )}
           </div>
         )}
 
@@ -165,18 +199,31 @@ export default function PerformanceChart() {
                   tickFormatter={(value) => `$${(value / 1000).toFixed(0)}K`}
                 />
                 <Tooltip 
-                  formatter={(value) => [formatCurrency(value), 'Equity']}
+                  formatter={(value, name) => [
+                    formatCurrency(value),
+                    name === 'portfolioEquity' ? 'Portfolio Equity' : 'S&P 500 (normalized)'
+                  ]}
                   labelFormatter={(label) => `Date: ${label}`}
                 />
                 <Legend />
                 <Line 
                   type="monotone" 
-                  dataKey="equity" 
+                  dataKey="portfolioEquity" 
                   stroke="#2563eb" 
                   strokeWidth={2}
                   name="Portfolio Equity"
                   dot={false}
                 />
+                {hasBenchmark && (
+                  <Line
+                    type="monotone"
+                    dataKey="benchmarkEquity"
+                    stroke="#16a34a"
+                    strokeWidth={2}
+                    name="S&P 500 (Normalized)"
+                    dot={false}
+                  />
+                )}
               </LineChart>
             </ResponsiveContainer>
           ) : (
@@ -187,7 +234,8 @@ export default function PerformanceChart() {
         </div>
 
         <div className="mt-4 text-xs text-gray-400">
-          Data delayed {performance?.data_delay_minutes || 15} minutes
+          Data delayed {performance?.data_delay_minutes ?? 15} minutes
+          {performance?.benchmark_metrics ? ' • Benchmark normalized to starting equity' : ''}
         </div>
       </div>
     </div>
